@@ -1,0 +1,111 @@
+\documentclass[a4paper,11pt]{report}
+
+% ---- Page layout ----
+\usepackage[margin=2.5cm]{geometry}
+
+% ---- Fonts (XeLaTeX; needed for correct Vietnamese diacritics) ----
+\usepackage{fontspec}
+
+% ---- Typography & links ----
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks = true,
+    linkcolor  = blue!50!black,
+    citecolor  = blue!50!black,
+    urlcolor   = blue!50!black
+}
+
+% ---- Math ----
+\usepackage{amsmath,amssymb,mathtools}
+
+% ---- Figures & tables ----
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% ---- Header / footer ----
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\rfoot{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{3cm}
+
+    {\LARGE\bfseries Customer Repurchase Prediction}\\[0.4cm]
+    {\Large for E-commerce Marketing Optimization}\\[2cm]
+
+    \rule{0.8\linewidth}{0.6pt}\\[0.5cm]
+    {\large Data Science Project Report}\\[0.2cm]
+    \rule{0.8\linewidth}{0.6pt}
+
+    \vfill
+
+    \begin{tabular}{ll}
+        \textbf{Instructor:} & Thân Quang Khoát \\
+    \end{tabular}
+
+    \vspace{0.8cm}
+
+    \textbf{Group Members}\\[0.3cm]
+    \begin{tabular}{ll}
+        Lê Văn Luận & 20252574M \\
+        Bùi Thị Linh & 20261258M \\
+        Nguyễn Khắc Duy Ngọc & 20261206M \\
+        Nguyễn Bá Anh & 20261218M \\
+    \end{tabular}
+
+    \vspace{1cm}
+    {\large \today}
+
+    \vspace*{1cm}
+\end{titlepage}
+
+\tableofcontents
+
+\chapter{Introduction}
+\input{content/introduction}
+
+\chapter{Business Understanding}
+\input{content/business_understanding}
+
+\chapter{Analytic Approach}
+\input{content/analytic_approach}
+
+\chapter{Data Requirements}
+\input{content/data_requirements}
+
+\chapter{Data Collection}
+\input{content/data_collection}
+
+\chapter{Data Understanding}
+\input{content/data_understanding}
+
+\chapter{Data Preparation}
+\input{content/data_preparation}
+
+\chapter{Modeling}
+\input{content/modeling}
+
+\chapter{Evaluation}
+\input{content/evaluation}
+
+\chapter{Deployment}
+\input{content/deployment}
+
+\chapter{Feedback}
+\input{content/feedback}
+
+\chapter{Conclusion}
+\input{content/conclusion}
+
+\end{document}

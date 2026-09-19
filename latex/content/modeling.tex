@@ -1,0 +1,18 @@
+\section{Baseline}
+
+An RFM-based rule system is used as the baseline model, ranking customers using simple Recency-Frequency-Monetary heuristics without any learned parameters.
+
+\section{Machine Learning Models}
+
+Two families of machine learning models are trained on top of the engineered features:
+
+\begin{itemize}
+    \item \textbf{Logistic Regression} -- a linear, well-calibrated baseline classifier.
+    \item \textbf{Random Forest / XGBoost} -- tree-ensemble models capable of capturing non-linear interactions between features.
+\end{itemize}
+
+The main model output is the predicted probability of repurchase, $P(\text{repurchase})$, which can optionally be reported as a churn-risk score, $1 - P(\text{repurchase})$.
+
+\section{Handling Class Imbalance}
+
+If the repurchase label is significantly imbalanced, class weighting is applied during training so that the minority class (repurchasers) is not overwhelmed by the majority class.

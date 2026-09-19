@@ -1,0 +1,9 @@
+The problem is framed as a \textbf{binary classification} task: predict the probability that a customer will make another purchase within the next 30 days.
+
+\paragraph{Population.} The population consists of customers who have purchased at least once. First-time buyers are evaluated with respect to their second purchase, while repeat buyers are evaluated with respect to their next subsequent purchase.
+
+\paragraph{Use of the model output.} The predicted probability is used as a ranking signal, denoted $P(\text{repurchase})$. Customers can equivalently be ranked by a churn-risk score,
+\begin{equation}
+    \text{churn risk} = 1 - P(\text{repurchase}),
+\end{equation}
+and the resulting ranking is used to select the top $X\%$ of customers for marketing targeting.

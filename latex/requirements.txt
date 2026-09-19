@@ -1,0 +1,14 @@
+fontspec
+geometry
+microtype
+xcolor
+hyperref
+amsmath
+amsfonts
+mathtools
+graphics
+float
+booktabs
+tools
+caption
+fancyhdr
