@@ -1,0 +1,12 @@
+Data is analyzed at the transaction, order, customer, and product levels in order to understand the population before any feature engineering or label generation takes place:
+
+\begin{itemize}
+    \item Number of customers, orders, and products in the dataset.
+    \item Missing values, cancellations, and invalid records.
+    \item Revenue over time.
+    \item Proportion of one-time versus repeat customers.
+    \item Purchase frequency and inter-purchase intervals.
+    \item RFM (Recency, Frequency, Monetary) segmentation of customer behavior.
+\end{itemize}
+
+Temporal coverage of the dataset is also checked explicitly before label generation, to confirm that there is enough history before each snapshot date and enough future data after it to observe a repurchase within the 30-day window.

@@ -1,0 +1,15 @@
+\section{Cleaning}
+
+Cancelled and otherwise invalid orders are identified and handled before aggregation. Revenue for each order item is computed as
+\begin{equation}
+    \text{Revenue} = \text{Quantity} \times \text{Price}.
+\end{equation}
+Order-level records are then aggregated to the customer level to obtain each customer's purchase history.
+
+\section{Snapshotting and Feature Generation}
+
+Time-based snapshots are created so that, for each snapshot date, features are generated using only historical data available \emph{before} that date. This mirrors how the model would actually be used in production, where only past behavior is available at prediction time.
+
+\section{Label Generation}
+
+The target label is whether a customer makes a repurchase within 30 days after the snapshot date. To avoid data leakage, the feature window (used to compute predictors) and the label window (used to determine the outcome) are kept strictly separate, with no overlap between the information available at prediction time and the future outcome being predicted.
