@@ -14,8 +14,8 @@ Since the model is ultimately used to rank and target customers, ranking-oriente
 
 \begin{itemize}
     \item \textbf{Lift@5\% / Lift@10\%} -- how much better the top-ranked segment performs relative to the overall base rate.
-    \item \textbf{Gain@10\%} -- the proportion of all repurchasers captured within the top 10\% of ranked customers.
-    \item \textbf{Precision@10\%} -- the repurchase rate observed within the top 10\% of ranked customers.
+    \item \textbf{Gain@10\%} -- the proportion of all churners captured within the top 10\% of ranked customers.
+    \item \textbf{Precision@10\%} -- the churn rate observed within the top 10\% of ranked customers.
 \end{itemize}
 
-Calibration of the predicted probabilities is also assessed where relevant. The overriding evaluation criterion is the model's ability to rank customers well within the top $X\%$ that a marketing team can realistically target, rather than raw classification accuracy alone.
+Calibration of the predicted probabilities is also assessed where relevant. The overriding evaluation criterion is the model's ability to rank high-risk customers well within the top $X\%$ that a marketing team can realistically target, rather than raw classification accuracy alone.

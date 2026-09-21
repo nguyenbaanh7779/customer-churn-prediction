@@ -1,9 +1,9 @@
-The problem is framed as a \textbf{binary classification} task: predict the probability that a customer will make another purchase within the next 30 days.
+The problem is framed as a \textbf{binary classification} task: predict the probability that an existing customer will become inactive within a defined future period.
 
-\paragraph{Population.} The population consists of customers who have purchased at least once. First-time buyers are evaluated with respect to their second purchase, while repeat buyers are evaluated with respect to their next subsequent purchase.
+\paragraph{Population.} The population consists of customers with identifiable purchase history, i.e.\ customers who can be traced across transactions using a customer identifier.
 
-\paragraph{Use of the model output.} The predicted probability is used as a ranking signal, denoted $P(\text{repurchase})$. Customers can equivalently be ranked by a churn-risk score,
+\paragraph{Use of the model output.} The predicted probability is used as a ranking signal, denoted $P(\text{churn})$, equivalent to the probability that a customer makes no purchase during the future period:
 \begin{equation}
-    \text{churn risk} = 1 - P(\text{repurchase}),
+    P(\text{churn}) = P(\text{no purchase within the future period}).
 \end{equation}
-and the resulting ranking is used to select the top $X\%$ of customers for marketing targeting.
+Customers are ranked by this churn-risk score, and the resulting ranking is used to select the top $X\%$ of customers for retention marketing.

@@ -1,7 +1,7 @@
-Since the Olist dataset is provided as a static export rather than a live system, data collection is simulated as a pipeline that mirrors how the data would be collected from an e-commerce system in production:
+Since the Online Retail II dataset is provided as a static export rather than a live system, data is assumed to originate from an e-commerce transaction system, and data collection is simulated as a pipeline that mirrors how the data would be collected in production:
 
 \begin{center}
 \textbf{Raw layer} $\rightarrow$ \textbf{Schema / data quality validation} $\rightarrow$ \textbf{Cleaned / staging data} $\rightarrow$ \textbf{Analytical dataset}
 \end{center}
 
-The raw Olist CSV files are loaded as-is into a raw layer. Schema and data quality checks are then applied (column types, key uniqueness, referential integrity between tables). Validated records are written to a staging layer, from which Customer-, Order-, and Product-level analytical tables are constructed for downstream analysis and modeling.
+The raw Online Retail II transaction records are loaded as-is into a raw layer. Schema and data quality checks are then applied (column types, key presence, valid value ranges). Validated records are written to a staging layer, from which transaction-, invoice/order-, product-, and customer-level analytical views are constructed for downstream analysis and modeling.

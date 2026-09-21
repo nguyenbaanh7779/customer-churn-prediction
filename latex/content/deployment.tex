@@ -1,7 +1,7 @@
-The intended deployment is a customer scoring pipeline that turns raw purchase history into an actionable marketing target list:
+The intended deployment is a customer scoring pipeline that turns raw transaction history into an actionable retention marketing target list:
 
 \begin{center}
-\textbf{Customer history} $\rightarrow$ \textbf{Feature generation} $\rightarrow$ \textbf{Model scoring} $\rightarrow$ \textbf{Repurchase probability / risk} $\rightarrow$ \textbf{Customer ranking} $\rightarrow$ \textbf{Marketing target list}
+\textbf{Customer transaction history} $\rightarrow$ \textbf{Feature generation} $\rightarrow$ \textbf{Model scoring} $\rightarrow$ \textbf{Churn probability / risk} $\rightarrow$ \textbf{Customer ranking} $\rightarrow$ \textbf{Retention marketing target list}
 \end{center}
 
 This pipeline can be demonstrated either as an interactive Streamlit application, allowing a user to inspect individual customer scores, or as a batch scoring job that periodically produces a ranked target list for the marketing team.

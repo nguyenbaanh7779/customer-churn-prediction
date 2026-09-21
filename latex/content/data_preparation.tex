@@ -1,10 +1,10 @@
 \section{Cleaning}
 
-Cancelled and otherwise invalid orders are identified and handled before aggregation. Revenue for each order item is computed as
+Transactions with a missing \textbf{Customer ID}, cancellations, and other invalid transactions are identified and handled before aggregation. Revenue for each transaction line is computed as
 \begin{equation}
     \text{Revenue} = \text{Quantity} \times \text{Price}.
 \end{equation}
-Order-level records are then aggregated to the customer level to obtain each customer's purchase history.
+Transaction lines are then aggregated to the invoice level, and invoice-level records are aggregated to the customer level, to obtain each customer's purchase history.
 
 \section{Snapshotting and Feature Generation}
 
@@ -12,4 +12,4 @@ Time-based snapshots are created so that, for each snapshot date, features are g
 
 \section{Label Generation}
 
-The target label is whether a customer makes a repurchase within 30 days after the snapshot date. To avoid data leakage, the feature window (used to compute predictors) and the label window (used to determine the outcome) are kept strictly separate, with no overlap between the information available at prediction time and the future outcome being predicted.
+The churn label is defined from future purchase behavior: a customer is labeled as churned if no purchase is observed during the label window following the snapshot date. To avoid data leakage, the feature window (used to compute predictors) and the label window (used to determine the outcome) are kept strictly separate, with no overlap between the information available at prediction time and the future outcome being predicted.

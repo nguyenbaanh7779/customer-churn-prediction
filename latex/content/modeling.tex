@@ -11,8 +11,8 @@ Two families of machine learning models are trained on top of the engineered fea
     \item \textbf{Random Forest / XGBoost} -- tree-ensemble models capable of capturing non-linear interactions between features.
 \end{itemize}
 
-The main model output is the predicted probability of repurchase, $P(\text{repurchase})$, which can optionally be reported as a churn-risk score, $1 - P(\text{repurchase})$.
+The main model output is the predicted probability of churn, $P(\text{churn})$, equivalently the probability of no purchase, $P(\text{no purchase})$, within the prediction horizon.
 
 \section{Handling Class Imbalance}
 
-If the repurchase label is significantly imbalanced, class weighting is applied during training so that the minority class (repurchasers) is not overwhelmed by the majority class.
+If the churn label is significantly imbalanced, class weighting is applied during training so that the minority class is not overwhelmed by the majority class.
