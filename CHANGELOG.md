@@ -9,6 +9,7 @@
 - Add Python dependencies in `requirements.txt` ([`2ec3999`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/2ec3999))
 - Add initial customer data exploration notebook ([`09516ed`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/09516ed))
 - Add `docs/strategy/README.md`, the source-of-truth business/analytical strategy for the 12-chapter report (Customer x Snapshot modeling unit, Training/Scoring population design, eligibility-episode cooldown, embargoed temporal split, business-impact formula chain) ([`da29207`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/da29207))
+- Add `notebooks/06_data_understanding.ipynb`, implementing all 15 sections of Chapter 6 (data quality, monthly sales, new vs existing customers, repeat customer analysis, inter-purchase interval, RFM, customer lifecycle, provisional churn exploration, snapshot/design feasibility, key findings) on the real Online Retail II data ([`1d2b3b0`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/1d2b3b0))
 
 ### Updates
 
