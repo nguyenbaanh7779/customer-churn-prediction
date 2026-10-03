@@ -1,3 +1,24 @@
-This report summarizes the model's predictive performance and its ability to rank customers by churn risk. The Random/No-model, RFM rule-based, and ML targeting strategies are compared at different top $X\%$ targeting levels, showing the incremental value each approach adds over the previous one.
+\section{Summary of Strategy}
+\label{sec:12-1}
 
-Estimated revenue, cost, and profit/ROI are reported under explicitly defined campaign assumptions. A key limitation of this analysis is that the Online Retail II dataset does not contain marketing treatment/control data, so these financial figures should be interpreted as a business simulation rather than a validated measurement of campaign impact. Confirming the real-world impact of ML-based targeting would require running an actual campaign with a treatment/control design.
+The project connects e-commerce revenue generation with customer retention and churn prediction.
+
+\section{Business-to-Technical Translation}
+\label{sec:12-2}
+
+The business objective is to increase sales revenue through repeat-purchase revenue from existing customers while controlling retention and marketing cost. The technical solution is customer-level churn prediction and risk ranking.
+
+\section{Operational Strategy}
+\label{sec:12-3}
+
+Weekly batch scoring of all active customers, customer snapshots, episode-based sampling for training, suppression of contacted customers, churn prediction, ranking and Top-K targeting.
+
+\section{Limitations}
+\label{sec:12-4}
+
+The dataset lacks marketing treatment, cost, margin and control-group information, so causal uplift, incremental revenue and true ROI cannot be established. The $\sim$2-year span and seasonality limit the size and representativeness of the test period.
+
+\section{Future Work}
+\label{sec:12-5}
+
+Integrate campaign and financial data, run treatment/control experiments, apply uplift modeling and next-best-action optimization, and perform complete profitability analysis.

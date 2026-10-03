@@ -1,3 +1,36 @@
-After deployment, actual customer activity is tracked and compared against predictions. Model health is monitored on an ongoing basis using AUC/GINI, Lift/Gain, calibration, and the observed churn rate broken down by score band.
+\textbf{Note.} Like Chapter~\ref{ch:deployment}, this chapter is a \textbf{proposed design}.
 
-In a real marketing campaign, a treatment/control group design is required to measure the \emph{incremental} impact of targeting -- that is, the effect of the campaign beyond what would have happened anyway. Because the Online Retail II dataset does not contain marketing treatment or response data, revenue, cost, and profit/ROI figures for this project are presented as a \textbf{business simulation} based on stated assumptions, rather than as a measured causal impact.
+\section{Feedback Loop}
+\label{sec:11-1}
+
+After $H$ days, observe customer purchases and compare predicted churn with actual churn.
+
+\section{Model Performance Monitoring}
+\label{sec:11-2}
+
+Track classification and weekly Top-K ranking metrics over time.
+
+\section{Business Outcome Monitoring}
+\label{sec:11-3}
+
+Track repurchase rate, revenue contribution, target population and campaign cost when available.
+
+\section{Data Drift}
+\label{sec:11-4}
+
+Monitor transaction volume, feature distributions and customer behavior.
+
+\section{Concept Drift}
+\label{sec:11-5}
+
+Monitor changes in the relationship between behavior and future churn, including seasonal shifts.
+
+\section{Campaign Feedback}
+\label{sec:11-6}
+
+If treatment/control data become available, evaluate campaign response and incremental outcomes; this would also allow the assumed $e$, $r$ and costs to be replaced by measured values.
+
+\section{Model Retraining}
+\label{sec:11-7}
+
+Retrain periodically or when performance, drift or behavior changes justify it, using the same embargoed temporal design and the same Training Population rule.

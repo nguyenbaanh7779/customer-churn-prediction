@@ -1,25 +1,51 @@
+\section{E-commerce Sales Business}
+\label{sec:2-1}
+
+The business sells products through an e-commerce transaction system, and sales generate revenue from customer purchases. At a high level:
+\begin{equation*}
+    \text{Profit} = \text{Sales Revenue} - \text{Business Costs}
+\end{equation*}
+Costs may include product/operating costs, marketing costs and retention incentive costs.
+
+\section{Revenue from New and Existing Customers}
+\label{sec:2-2}
+
+Sales revenue comes from new customers making first purchases and existing customers making repeat purchases. Existing-customer revenue is generated when previously acquired customers continue purchasing.
+
+\section{Customer Churn as a Business Problem}
+\label{sec:2-3}
+
+Existing customers may stop purchasing, and churn reduces future sales revenue from the existing customer base. The business therefore needs to identify customers whose behavior indicates churn risk.
+
+\section{Retention and Marketing Cost Constraint}
+\label{sec:2-4}
+
+Retention activities require resources. The company cannot necessarily apply the same retention action to every existing customer because marketing budget, campaign capacity and incentives are limited. Retention resources must be allocated selectively.
+
 \section{Business Objective}
+\label{sec:2-5}
 
-The business objective is to increase customer retention and revenue while reducing ineffective marketing costs. In practice, this means identifying which customers should be prioritized for retention marketing, so that limited marketing budget is spent on the customers most at risk of churning, rather than being spread evenly across the entire customer base.
+The primary business objective is to increase total sales revenue by increasing repeat-purchase revenue from existing customers, while reducing inefficient retention and marketing expenditure. The Data Science project supports this by identifying and prioritizing existing customers at higher risk of churn.
 
-\section{Business KPIs}
+\section{Business Success Perspective}
+\label{sec:2-6}
 
-The following KPIs are used to evaluate the business impact of the project:
+Revenue measures include total revenue, existing-customer revenue and repeat-purchase activity. Marketing measures include target population size and retention cost where available. Model metrics assess prioritization ability; causal revenue uplift cannot be claimed without campaign outcome data.
 
-\begin{itemize}
-    \item \textbf{Retention / Repurchase Rate} -- the proportion of customers who remain active (make another purchase) within the target window.
-    \item \textbf{Revenue} -- total revenue generated from retained customers.
-    \item \textbf{Marketing Cost} -- the cost of running a retention campaign on a targeted customer segment.
-    \item \textbf{Cost per Retained Customer} -- marketing cost divided by the number of customers who actually stay active.
-    \item \textbf{Estimated Profit / ROI} -- the net financial benefit of the campaign after accounting for marketing cost.
-\end{itemize}
+\section{Success Criteria}
+\label{sec:2-7}
 
-\section{Targeting Strategies Compared}
+Success is defined \textbf{relative to simple alternatives} rather than by arbitrary absolute thresholds:
 
-Three targeting strategies are compared to quantify the value added by modeling:
-
-\begin{enumerate}
-    \item \textbf{Random / No-model} -- customers are targeted without any prioritization, serving as the baseline.
-    \item \textbf{RFM rule-based} -- customers are prioritized using simple Recency-Frequency-Monetary heuristics.
-    \item \textbf{ML targeting} -- customers are prioritized using the predicted churn probability from a trained model.
-\end{enumerate}
+\begin{center}
+\begin{tabular}{@{}p{3cm}p{11.5cm}@{}}
+    \toprule
+    Level & Criterion (evaluated on the unseen test period) \\
+    \midrule
+    Predictive & Final model PR-AUC exceeds the test-period churn rate (random reference) and the recency-rule baseline. \\
+    Targeting & Final model Lift@K and Recall@K at the chosen operating $K$ (e.g.\ 20--30\%) exceed the recency-rule baseline, averaged over weekly scoring dates. \\
+    Stability & Top-K performance does not collapse on individual test weeks (report mean $\pm$ standard deviation). \\
+    Business scenario & Under the base scenario, estimated net impact at the chosen $K$ is positive and higher than for recency-rule and random targeting at the same $K$. \\
+    \bottomrule
+\end{tabular}
+\end{center}

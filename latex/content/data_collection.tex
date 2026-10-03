@@ -1,7 +1,30 @@
-Since the Online Retail II dataset is provided as a static export rather than a live system, data is assumed to originate from an e-commerce transaction system, and data collection is simulated as a pipeline that mirrors how the data would be collected in production:
+\section{Simulated Business Data Source}
+\label{sec:5-1}
 
-\begin{center}
-\textbf{Raw layer} $\rightarrow$ \textbf{Schema / data quality validation} $\rightarrow$ \textbf{Cleaned / staging data} $\rightarrow$ \textbf{Analytical dataset}
-\end{center}
+Online Retail II is described as a historical extract of data collected from an e-commerce transaction system. The narrative is not "download a dataset and analyze it" but "the analytical system receives transaction records extracted from the sales system".
 
-The raw Online Retail II transaction records are loaded as-is into a raw layer. Schema and data quality checks are then applied (column types, key presence, valid value ranges). Validated records are written to a staging layer, from which transaction-, invoice/order-, product-, and customer-level analytical views are constructed for downstream analysis and modeling.
+\section{Simulated E-commerce Transaction System}
+\label{sec:5-2}
+
+The simulated architecture contains Order, Product, Customer and Transaction systems. A completed purchase produces invoice, customer, product, quantity, price, timestamp and country information.
+
+\section{Data Extraction}
+\label{sec:5-3}
+
+Transaction data are assumed to be extracted from the transactional database into raw analytical storage, followed by validation and analytical transformation.
+
+\section{Collection Frequency}
+\label{sec:5-4}
+
+Transactions may be generated continuously while the analytical platform ingests data daily or on another schedule. Ingestion frequency is distinct from model scoring frequency.
+
+\section{Historical Dataset Representation}
+\label{sec:5-5}
+
+Online Retail II is the historical extract used for experimentation, and the report transparently identifies it as a public dataset. Properties that affect the design:
+
+\begin{itemize}
+    \item It covers roughly \textbf{two years} (December 2009 -- December 2011), which limits the number of labelable weekly snapshots (see Sections~\ref{sec:6-14}, \ref{sec:7-9}).
+    \item The retailer is UK-based and many customers are \textbf{wholesalers/businesses}, so spend per customer is highly heterogeneous.
+    \item Demand is strongly \textbf{seasonal}, with a peak before Christmas.
+\end{itemize}

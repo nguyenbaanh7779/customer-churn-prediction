@@ -1,9 +1,167 @@
-The problem is framed as a \textbf{binary classification} task: predict the probability that an existing customer will become inactive within a defined future period.
+\section{From Business Objective to Analytical Problem}
+\label{sec:3-1}
 
-\paragraph{Population.} The population consists of customers with identifiable purchase history, i.e.\ customers who can be traced across transactions using a customer identifier.
+Increasing revenue requires more repeat-purchase revenue from existing customers and efficient use of retention resources. The analytical direction is therefore to identify existing customers at risk of not purchasing again, estimate churn probability, and prioritize customers for retention activities.
 
-\paragraph{Use of the model output.} The predicted probability is used as a ranking signal, denoted $P(\text{churn})$, equivalent to the probability that a customer makes no purchase during the future period:
-\begin{equation}
-    P(\text{churn}) = P(\text{no purchase within the future period}).
-\end{equation}
-Customers are ranked by this churn-risk score, and the resulting ranking is used to select the top $X\%$ of customers for retention marketing.
+\section{Customer Retention Strategy}
+\label{sec:3-2}
+
+\begin{center}
+\textbf{Active Customers} $\rightarrow$ \textbf{Scoring Population} (minus suppressed) $\rightarrow$ \textbf{Churn Prediction} $\rightarrow$ \textbf{Churn Probability} \\[0.3cm]
+$\rightarrow$ \textbf{Risk Ranking} $\rightarrow$ \textbf{Capacity \& Business Rules} $\rightarrow$ \textbf{Target Population} $\rightarrow$ \textbf{Retention Campaign}
+\end{center}
+
+\section{Churn Prediction Definition}
+\label{sec:3-3}
+
+The core technical problem is \textbf{binary customer churn prediction}: at snapshot date $t$, predict whether an eligible existing customer will make no valid purchase during a future prediction window.
+
+\section{Customer Snapshot}
+\label{sec:3-4}
+
+The fundamental modeling unit is \textbf{Customer $\times$ Snapshot Date}, not the transaction. Each snapshot represents the customer's state at a point in time and contains features calculated only from information available up to that point.
+
+Snapshots are drawn from \textbf{two distinct populations} with different purposes (Section~\ref{sec:3-7}): a \emph{Training Population}, sampled to limit redundant rows, and a \emph{Scoring Population}, which mirrors weekly operations and is used for validation, test and deployment.
+
+\section{Observation Window}
+\label{sec:3-5}
+
+Historical behavior is collected within an observation window ending at the snapshot date. Features may use full history up to $t$ as well as fixed look-back windows (e.g.\ last 30, 90, 180 days). Features must be derived exclusively from information available at or before $t$.
+
+\section{Prediction Window, Label and Label Availability}
+\label{sec:3-6}
+
+For customer $i$ at snapshot date $t$:
+\begin{align*}
+    \text{Churn}(i, t) &= 1 \quad \text{if no valid purchase occurs in } (t,\, t+H] \\
+    \text{Churn}(i, t) &= 0 \quad \text{otherwise}
+\end{align*}
+$H$ is the prediction horizon, informed by observed inter-purchase behavior (Section~\ref{sec:6-9}).
+
+\textbf{Label availability rule:} a snapshot can be labeled only if its full prediction window is observed, i.e.\ $t + H \leq \text{data end date}$. Snapshots after this date can be scored but not evaluated.
+
+\section{Population Design}
+\label{sec:3-7}
+
+\begin{center}
+\begin{tabular}{@{}p{3.2cm}p{7cm}p{4.3cm}@{}}
+    \toprule
+    Population & Definition & Used for \\
+    \midrule
+    Customer Universe & All customers with a valid Customer ID. & Data Understanding \\
+    Existing Customer at $t$ & At least one valid purchase on or before $t$. & -- \\
+    Active Customer at $t$ & Existing customer with Recency $\leq R_{\max}$ (\textbf{activity condition}). & Base for both populations below \\
+    \textbf{Training Population} & Active customers at weekly dates, \textbf{sampled with the eligibility-episode rule} (Section~\ref{sec:3-9}). & Model training \\
+    \textbf{Scoring Population at $t$} & \textbf{All} active customers at weekly date $t$, excluding customers under \textbf{suppression} (Section~\ref{sec:10-5}). \textbf{No episode cooldown.} & Validation, test, deployment \\
+    Target Population & Customers selected from the Scoring Population after ranking, marketing-capacity constraints and business rules. & Retention campaign \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Why two populations.} The eligibility episode is a \emph{data-sampling technique} for training; suppression is an \emph{operational rule} for contacted customers. They solve different problems and must not be mixed:
+
+\begin{itemize}
+    \item If the episode cooldown were applied to scoring, only about 1/13 of active customers would be scored each week (with $H = 90$ days and $C = H$), a customer scored as low risk would not be re-scored for 90 days even if their behavior deteriorated, and weekly Top-K would be chosen from a small, arbitrary subset rather than from all active customers.
+    \item If every weekly snapshot were used for training without control, the training data would contain many near-duplicate rows with overlapping, strongly correlated labels.
+\end{itemize}
+
+Both populations are subsets of the same \textbf{weekly active-customer base table} (Section~\ref{sec:7-5}), so they share one feature and label pipeline.
+
+\textbf{Why the activity condition matters.} A customer whose last purchase was, for example, 400 days ago is almost certainly a churner. Including such customers adds "easy" positives that inflate ROC-AUC and Precision@K while offering no business value, because they are already lost. $R_{\max}$ is set from Data Understanding (e.g.\ a high percentile of inter-purchase intervals) and must be configurable.
+
+\textbf{One-time buyers.} Customers with exactly one purchase at $t$ behave differently from repeat customers and are usually the largest group. They stay in both populations and results are also reported separately for the one-time and repeat segments.
+
+\section{Serving Strategy}
+\label{sec:3-8}
+
+The primary serving strategy is \textbf{weekly batch scoring} of the full Scoring Population. Data may be collected daily or continuously, but core model scoring is weekly. Every active, non-suppressed customer is re-scored every week, so a change in behavior is reflected in the next weekly ranking.
+
+\section{Training Population: Eligibility Episode and Cooldown}
+\label{sec:3-9}
+
+\textbf{Problem.} Consecutive snapshots of the same customer differ only slightly (mostly recency increases), and their prediction windows overlap, so their labels are strongly correlated. Weekly instead of daily snapshots reduces this by a factor of seven but does not remove it. Overlapping rows are not wrong in themselves; the risks are treating them as independent observations and letting long-history customers dominate training.
+
+\textbf{Rule (training only).} A customer enters an \textbf{eligibility episode} at the first weekly date $t$ at which they are active. A training snapshot is taken at $t$, and the customer produces no further training snapshot until the episode ends:
+
+\begin{itemize}
+    \item \textbf{Default -- fixed cooldown:} the episode lasts $C = H$. The next training snapshot is the first weekly date $\geq t + C$ at which the customer is still active. Each customer's training labels then have non-overlapping prediction windows, and each customer contributes a similar number of rows.
+    \item \textbf{Alternative -- reset on purchase (configurable):} if the customer makes a valid purchase before $t + C$, the episode ends early and the next training snapshot is the first weekly date after that purchase. This captures the new customer state sooner. Whether a new snapshot is created depends only on purchases before that snapshot date, so no leakage is introduced.
+    \item A customer who exceeds $R_{\max}$ leaves the active base; if they purchase again, they re-enter and start a new episode.
+\end{itemize}
+
+\textbf{Scope.} The episode rule is applied \textbf{only when building the Training Population} -- in the training period, and in the train + validation period when the final model is retrained (Section~\ref{sec:8-7}). It is \textbf{never} applied to validation, test or deployment scoring.
+
+\textbf{Comparison design.} As an ablation (Section~\ref{sec:8-10}), a second training scheme uses \textbf{all weekly active snapshots with sample weights} $w = 1 / n_i$, where $n_i$ is the number of training snapshots of customer $i$. Both schemes are evaluated on the same Scoring Population test set.
+
+\section{Analytical Design Informed by Data Understanding}
+\label{sec:3-10}
+
+Prediction horizon, observation windows, activity threshold, scoring cadence, training-episode cooldown and suppression period are supported by Data Understanding -- inter-purchase intervals, activity patterns and repeated-observation behavior -- rather than arbitrary assumptions.
+
+\section{Feature Engineering Strategy}
+\label{sec:3-11}
+
+Features are constructed from customer history available at the snapshot date. Main groups:
+
+\begin{center}
+\begin{tabular}{@{}p{3.6cm}p{10.6cm}@{}}
+    \toprule
+    Group & Examples \\
+    \midrule
+    RFM & Recency, frequency (purchase occasions), monetary value \\
+    Purchase behavior & Average order value, items per order, spend trend \\
+    Temporal behavior & Tenure, mean/std of inter-purchase gaps, recency $\div$ typical gap, activity in last 30/90/180 days \\
+    Product behavior & Number of distinct products, repeat-product share \\
+    Cancellation behavior & Cancellation count and share of value \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\section{Modeling Strategy}
+\label{sec:3-12}
+
+\begin{itemize}
+    \item Baselines: random ranking and a recency rule (see Section~\ref{sec:8-2}).
+    \item Algorithms: Logistic Regression, Random Forest, XGBoost.
+    \item Feature sets: RFM $\rightarrow$ RFM + behavioral/temporal $\rightarrow$ full feature set.
+    \item Training on the \textbf{Training Population} (episode-sampled); validation, test and scoring on the \textbf{Scoring Population} (all active, non-suppressed customers each week).
+    \item Temporal train/validation/test split \textbf{with an embargo of $H$ days} between consecutive periods (Section~\ref{sec:7-9}).
+    \item No target leakage (Section~\ref{sec:7-8}).
+\end{itemize}
+
+\section{Marketing Use of Model Output}
+\label{sec:3-13}
+
+The model produces churn probability, which is used to rank customers. Marketing capacity and business rules then create the target population. The model does not decide the treatment (for example, voucher versus advertising).
+
+\section{Evaluation Strategy}
+\label{sec:3-14}
+
+Evaluate the system at three levels: \textbf{predictive performance}, \textbf{targeting/ranking performance}, and \textbf{business-impact estimation}. Business-impact results are scenario estimates under explicit assumptions, not observed causal effects. Details are in Chapter~\ref{ch:evaluation}.
+
+\section{Configuration Parameters}
+\label{sec:3-15}
+
+All design parameters live in a single configuration and are reported in the final report.
+
+\begin{center}
+\begin{tabular}{@{}p{3.6cm}p{1.3cm}p{5.8cm}p{3.2cm}@{}}
+    \toprule
+    Parameter & Symbol & Initial candidate & Decided in \\
+    \midrule
+    Prediction horizon & $H$ & 60 / 90 / 120 days & Sections~\ref{sec:6-9}, \ref{sec:6-14} \\
+    Activity threshold & $R_{\max}$ & High percentile of inter-purchase gap (e.g.\ P90--P95) & Sections~\ref{sec:6-9}, \ref{sec:6-14} \\
+    Training-episode cooldown & $C$ & $= H$ (fixed); alternative: reset on purchase & Sections~\ref{sec:6-14}, \ref{sec:8-10} \\
+    Training sampling scheme & -- & Episode (main) vs. all weekly + weights (ablation) & Section~\ref{sec:8-10} \\
+    Suppression period (operations) & $S$ & e.g.\ 4--8 weeks after contact & Section~\ref{sec:10-5} \\
+    Scoring cadence & -- & Weekly (Monday) & Section~\ref{sec:3-8} \\
+    Feature warm-up & -- & $\approx$ 6 months of history before first snapshot & Section~\ref{sec:6-14} \\
+    Split embargo & -- & $= H$ & Section~\ref{sec:7-9} \\
+    Target share & $K$ & 10 / 20 / 30 / 40 / 50\% & Section~\ref{sec:9-6} \\
+    Retention effectiveness & $e$ & 30 / 40 / 50\% & Section~\ref{sec:9-7} \\
+    Gross margin & $m$ & Assumed, e.g.\ 30 / 40 / 50\% & Section~\ref{sec:9-9} \\
+    Contact cost per customer & $c_{\text{contact}}$ & Assumed constant (GBP) & Section~\ref{sec:9-8} \\
+    Incentive cost per redemption & $c_{\text{inc}}$ & Assumed (GBP or \% of order value) & Section~\ref{sec:9-9} \\
+    \bottomrule
+\end{tabular}
+\end{center}

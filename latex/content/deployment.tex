@@ -1,7 +1,42 @@
-The intended deployment is a customer scoring pipeline that turns raw transaction history into an actionable retention marketing target list:
+\textbf{Note.} This chapter describes a \textbf{proposed operational design}. It is not implemented as a live system in this project.
+
+\section{Deployment Objective}
+\label{sec:10-1}
+
+Provide recurring churn scoring that produces a prioritized existing-customer population for retention marketing.
+
+\section{Weekly Batch Pipeline}
+\label{sec:10-2}
+
+The training-episode cooldown is \textbf{not} part of this pipeline; it exists only in training-data construction.
 
 \begin{center}
-\textbf{Customer transaction history} $\rightarrow$ \textbf{Feature generation} $\rightarrow$ \textbf{Model scoring} $\rightarrow$ \textbf{Churn probability / risk} $\rightarrow$ \textbf{Customer ranking} $\rightarrow$ \textbf{Retention marketing target list}
+\textbf{Latest transactions} $\rightarrow$ \textbf{Valid transactions} $\rightarrow$ \textbf{Active customers} (Recency $\leq R_{\max}$) $\rightarrow$ \textbf{Remove suppressed customers} \\[0.3cm]
+$\rightarrow$ \textbf{Snapshots} $\rightarrow$ \textbf{Features} $\rightarrow$ \textbf{Scoring} $\rightarrow$ \textbf{Ranking} $\rightarrow$ \textbf{Capacity \& business rules} $\rightarrow$ \textbf{Target population}
 \end{center}
 
-This pipeline can be demonstrated either as an interactive Streamlit application, allowing a user to inspect individual customer scores, or as a batch scoring job that periodically produces a ranked target list for the marketing team.
+\section{Customer Risk Output}
+\label{sec:10-3}
+
+Minimum output: \texttt{customer\_id}, \texttt{snapshot\_date}, \texttt{churn\_probability}, \texttt{risk\_band}, \texttt{rank}, \texttt{segment}, \texttt{model\_version}.
+
+\section{Target Population}
+\label{sec:10-4}
+
+Select target customers based on churn risk, marketing capacity and business constraints.
+
+\section{Suppression}
+\label{sec:10-5}
+
+Customers \textbf{contacted} in a campaign are excluded from the Scoring Population for a configurable suppression period $S$ (e.g.\ 4--8 weeks), so they are not targeted repeatedly. Suppression:
+
+\begin{itemize}
+    \item applies only to customers who were actually targeted, not to everyone who was scored;
+    \item is an operational business rule, independent of the training-episode cooldown $C$;
+    \item is logged, so that suppressed customers can be analyzed separately once campaign data exist.
+\end{itemize}
+
+\section{Monitoring}
+\label{sec:10-6}
+
+Data quality, feature drift, model performance, calibration, lift, risk-band behavior and business metrics where available.

@@ -1,13 +1,83 @@
-Data is analyzed at the transaction, invoice, customer, and product levels in order to understand the population before any feature engineering or label generation takes place:
+\section{Objective}
+\label{sec:6-1}
 
-\begin{itemize}
-    \item Number of transactions, invoices, customers, and products in the dataset.
-    \item Missing \textbf{Customer ID} values.
-    \item Cancellations and other invalid records.
-    \item Revenue over time.
-    \item Proportion of one-time versus repeat customers.
-    \item Purchase frequency and inter-purchase intervals.
-    \item RFM (Recency, Frequency, Monetary) segmentation of customer behavior.
-\end{itemize}
+Determine what the transaction data reveal about sales, customers, revenue composition, repeat purchasing, behavior, and the feasibility of churn prediction.
 
-The distribution of inter-purchase intervals is analyzed explicitly to determine an appropriate churn definition and prediction horizon, and to confirm that there is enough history before each snapshot date and enough future data after it to observe whether a customer remains active.
+\textbf{Note.} \textbf{Iterative link with Chapter~\ref{ch:data-preparation}.} Sections~\ref{sec:6-13}--\ref{sec:6-14} need churn labels and snapshots, which are formally built in Chapter~\ref{ch:data-preparation}. This chapter uses \textbf{provisional} labels and snapshots computed for candidate values of $H$, $R_{\max}$ and $C$. Final values are fixed in Chapter~\ref{ch:data-preparation}, following the iterative nature of the Data Science methodology.
+
+\section{Dataset Overview}
+\label{sec:6-2}
+
+Transaction count, unique customers, unique products, date range, countries, total quantity and revenue.
+
+\section{Data Quality}
+\label{sec:6-3}
+
+Missing values (especially Customer ID), duplicate records, invalid Quantity/Price values, cancellation records, non-product stock codes and other quality issues.
+
+\section{Monthly Sales Performance}
+\label{sec:6-4}
+
+Monthly customers, orders, quantity and revenue to understand sales dynamics and seasonality.
+
+\section{New vs Existing Customers}
+\label{sec:6-5}
+
+Classify customers by whether the period contains their first valid purchase or a subsequent one. Compare counts and revenue contribution.
+
+\section{Revenue from New and Existing Customers}
+\label{sec:6-6}
+
+New Customer Revenue, Existing Customer Revenue, Total Revenue and monthly shares. This directly supports the business case for retaining existing customers.
+
+\section{Repeat Customer Analysis}
+\label{sec:6-7}
+
+One-time versus repeat customers: counts, shares, orders and revenue contribution.
+
+\section{Monthly Repurchase Analysis}
+\label{sec:6-8}
+
+Eligible existing customers, repeat buyers and repurchase rate by month.
+
+\section{Inter-Purchase Interval}
+\label{sec:6-9}
+
+Time between consecutive purchase occasions: mean, median, percentiles and distribution. Results inform \textbf{$H$} and \textbf{$R_{\max}$}.
+
+\section{Customer Monetary and Behavioral Analysis}
+\label{sec:6-10}
+
+Customer revenue, order frequency, quantity, average order value and behavioral heterogeneity (including the influence of large wholesale customers).
+
+\section{Customer Lifecycle}
+\label{sec:6-11}
+
+Progression from first purchase to repeat purchase, active behavior, increasing recency, at-risk behavior and potential churn.
+
+\section{RFM Exploration}
+\label{sec:6-12}
+
+Recency, Frequency and Monetary distributions and their relationship with subsequent purchasing.
+
+\section{Churn Exploration}
+\label{sec:6-13}
+
+Using provisional labels: churn rate over time and across recency, frequency, monetary value and other characteristics. \textbf{Report the overall churn rate early} -- with many one-time buyers, churn may be the \emph{majority} class, which changes how PR-AUC and Precision should be read.
+
+\section{Snapshot Population and Design Feasibility}
+\label{sec:6-14}
+
+\begin{enumerate}
+    \item Compare daily, weekly-all and weekly episode-based snapshots: number of rows, rows per customer, share of near-duplicate rows, and class distribution. This quantifies why daily snapshots are rejected and how much the episode rule reduces training redundancy.
+    \item Show the effect of the activity condition ($R_{\max}$) on population size and churn rate.
+    \item Report the \textbf{weekly Scoring Population size} over time, which is the pool from which marketing selects Top-K each week, and contrast it with the much smaller number of customers that would be scored if the episode rule were wrongly applied to scoring.
+    \item \textbf{Feasibility check:} for each candidate $H$, count labelable weekly scoring dates after the warm-up and after the embargoes in Section~\ref{sec:7-9}. The test period should contain enough scoring dates (e.g.\ $\geq 8$) for stable Top-K estimates.
+\end{enumerate}
+
+Use the evidence to justify weekly batch scoring, the training-episode cooldown, $R_{\max}$ and the final $H$.
+
+\section{Key Findings}
+\label{sec:6-15}
+
+Business-oriented findings on revenue composition, repeat purchasing, customer heterogeneity, purchase intervals, churn behavior, data limitations and the chosen snapshot/prediction-window design.

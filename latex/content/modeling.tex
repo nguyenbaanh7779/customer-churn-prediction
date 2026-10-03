@@ -1,18 +1,72 @@
-\section{Baseline}
+\section{Modeling Objective}
+\label{sec:8-1}
 
-An RFM-based rule system is used as the baseline model, ranking customers using simple Recency-Frequency-Monetary heuristics without any learned parameters.
+Estimate $P(\text{Churn} = 1 \mid \text{Customer History at Snapshot})$.
 
-\section{Machine Learning Models}
+\section{Baselines}
+\label{sec:8-2}
 
-Two families of machine learning models are trained on top of the engineered features:
+\begin{center}
+\begin{tabular}{@{}p{4.2cm}p{9.9cm}@{}}
+    \toprule
+    Baseline & Role \\
+    \midrule
+    Random ranking & Reference for Lift $= 1$ and PR-AUC $=$ churn rate. \\
+    Recency rule & Rank customers by recency (longest since last purchase first). A strong, business-realistic rule the models must beat. \\
+    Optional: RFM score rule & Rank by a simple combined RFM score. \\
+    \bottomrule
+\end{tabular}
+\end{center}
 
-\begin{itemize}
-    \item \textbf{Logistic Regression} -- a linear, well-calibrated baseline classifier.
-    \item \textbf{Random Forest / XGBoost} -- tree-ensemble models capable of capturing non-linear interactions between features.
-\end{itemize}
+\section{RFM Model}
+\label{sec:8-3}
 
-The main model output is the predicted probability of churn, $P(\text{churn})$, equivalently the probability of no purchase, $P(\text{no purchase})$, within the prediction horizon.
+A model using Recency, Frequency and Monetary features.
 
-\section{Handling Class Imbalance}
+\section{Extended Feature Model}
+\label{sec:8-4}
 
-If the churn label is significantly imbalanced, class weighting is applied during training so that the minority class is not overwhelmed by the majority class.
+Add behavioral and temporal features to test whether richer history improves prediction.
+
+\section{Full Feature Model}
+\label{sec:8-5}
+
+Add product and cancellation features where supported.
+
+\section{Algorithms}
+\label{sec:8-6}
+
+Compare Logistic Regression, Random Forest and XGBoost.
+
+\section{Hyperparameter Tuning}
+\label{sec:8-7}
+
+Tune on the validation period while preserving temporal separation. Validation metrics are computed on the Scoring Population. After selection, \textbf{retrain the chosen configuration on the Training Population re-derived over train + validation} (respecting the embargo before the test period) and evaluate once on the test Scoring Population.
+
+\section{Model Selection}
+\label{sec:8-8}
+
+Select the final model using predictive and ranking performance, with particular attention to Top-K targeting metrics at the operating $K$.
+
+\section{Model Interpretability}
+\label{sec:8-9}
+
+Feature importance and, where appropriate, global/local explanations (e.g.\ SHAP). Findings are described as associations, not causes.
+
+\section{Training Population Ablation}
+\label{sec:8-10}
+
+Compare two training schemes for the selected algorithm and feature set, both evaluated on the \textbf{same} test Scoring Population:
+
+\begin{center}
+\begin{tabular}{@{}p{4.5cm}p{9.6cm}@{}}
+    \toprule
+    Scheme & Training rows \\
+    \midrule
+    A -- Episode (main) & \texttt{in\_training\_sample} rows, unweighted \\
+    B -- All weekly, weighted & All weekly active rows in the training period, weighted by \texttt{sample\_weight} \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+If A matches B on PR-AUC and weekly Lift@K, the episode rule reduces training data and redundancy without losing predictive quality. If B is clearly better, report it and discuss the trade-off.

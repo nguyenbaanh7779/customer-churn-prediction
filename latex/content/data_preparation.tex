@@ -1,15 +1,125 @@
-\section{Cleaning}
+\section{Data Cleaning}
+\label{sec:7-1}
 
-Transactions with a missing \textbf{Customer ID}, cancellations, and other invalid transactions are identified and handled before aggregation. Revenue for each transaction line is computed as
-\begin{equation}
-    \text{Revenue} = \text{Quantity} \times \text{Price}.
-\end{equation}
-Transaction lines are then aggregated to the invoice level, and invoice-level records are aggregated to the customer level, to obtain each customer's purchase history.
+Clean transaction records using documented, reproducible rules. Every rule reports how many rows and how much revenue it removes.
 
-\section{Snapshotting and Feature Generation}
+\section{Valid Transaction Definition}
+\label{sec:7-2}
 
-Time-based snapshots are created so that, for each snapshot date, features are generated using only historical data available \emph{before} that date. This mirrors how the model would actually be used in production, where only past behavior is available at prediction time.
+A \textbf{valid purchase} row must satisfy all of the following:
 
-\section{Label Generation}
+\begin{center}
+\begin{tabular}{@{}p{3.8cm}p{10.3cm}@{}}
+    \toprule
+    Rule & Treatment \\
+    \midrule
+    Customer ID present & Rows without Customer ID are excluded from customer history (still counted in the Section~\ref{sec:6-2} overview). \\
+    Not a cancellation & Invoices starting with "C" are excluded from purchases; kept separately for cancellation features. \\
+    Quantity $>$ 0 and Price $>$ 0 & Otherwise excluded. \\
+    Product stock code & Non-product codes (e.g.\ postage, manual adjustments, bank charges, marketplace fees) are excluded; the final list is documented. \\
+    Exact duplicates & Removed. \\
+    \bottomrule
+\end{tabular}
+\end{center}
 
-The churn label is defined from future purchase behavior: a customer is labeled as churned if no purchase is observed during the label window following the snapshot date. To avoid data leakage, the feature window (used to compute predictors) and the label window (used to determine the outcome) are kept strictly separate, with no overlap between the information available at prediction time and the future outcome being predicted.
+A \textbf{purchase occasion} is one distinct invoice (or one customer-day, if chosen and documented). Frequency and inter-purchase intervals are computed on purchase occasions, not rows.
+
+\section{Customer History Construction}
+\label{sec:7-3}
+
+Aggregate valid transaction history by customer while preserving timestamps and product information.
+
+\section{Eligibility Construction}
+\label{sec:7-4}
+
+Eligibility is built in two steps.
+
+\textbf{Step 1 -- Weekly active-customer base.} At each weekly date $t$, a customer is active if:
+
+\begin{enumerate}
+    \item at least one valid purchase exists on or before $t$ (existing customer);
+    \item Recency at $t$ $\leq R_{\max}$ (activity condition);
+    \item $t$ lies within the snapshot period (after warm-up; $t + H \leq$ data end for labeled rows).
+\end{enumerate}
+
+\textbf{Step 2 -- Population flags on the base table.}
+
+\begin{center}
+\begin{tabular}{@{}p{4.6cm}p{9.5cm}@{}}
+    \toprule
+    Flag & Rule \\
+    \midrule
+    \texttt{in\_training\_sample} & Row selected by the eligibility-episode rule (Section~\ref{sec:3-9}). Computed per customer in date order. \\
+    \texttt{in\_scoring\_population} & Row is active and the customer is not under suppression at $t$. In the historical data there are no real campaigns, so suppression is empty and every active row is in the Scoring Population (see Section~\ref{sec:9-1}). \\
+    \texttt{sample\_weight} & $1 /$ (number of weekly active rows of the customer in the training period); used only by the ablation scheme (Section~\ref{sec:8-10}). \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\section{Customer Snapshot Construction}
+\label{sec:7-5}
+
+Construct \textbf{one weekly active-customer base table} of Customer $\times$ Snapshot Date rows, then compute features and labels once for this table. The Training Population and the Scoring Population are filters on it (via the flags above), which guarantees that both use identical feature and label definitions.
+
+\section{Feature Engineering}
+\label{sec:7-6}
+
+Generate historical features using information available up to the snapshot date only.
+
+\section{Churn Label Construction}
+\label{sec:7-7}
+
+Use only the prediction window $(t,\, t+H]$ to determine churn, applying the same valid-purchase definition as Section~\ref{sec:7-2}.
+
+\section{Leakage Prevention}
+\label{sec:7-8}
+
+No future information may be used in feature construction. The prediction window is reserved for label construction. Aggregates that depend on the whole dataset (scalers, encoders, imputation values, percentile thresholds) are fitted on the training period only.
+
+\section{Temporal Dataset Split with Embargo}
+\label{sec:7-9}
+
+Split chronologically by snapshot date into train, validation and test, with an \textbf{embargo of $H$ days} between consecutive periods:
+\begin{align*}
+    \text{first validation date} &\geq \text{last training date} + H \\
+    \text{first test date} &\geq \text{last validation date} + H
+\end{align*}
+Without the embargo, labels of late training snapshots are observed during the validation period, so the model effectively learns from a period it is later evaluated on.
+
+\begin{center}
+\begin{tabular}{@{}p{2.6cm}p{6.4cm}p{5cm}@{}}
+    \toprule
+    Split & Rows used & Purpose \\
+    \midrule
+    Train & \texttt{in\_training\_sample} rows in the train period & Fit candidate models \\
+    Validation & \texttt{in\_scoring\_population} rows in the validation period & Tuning, model selection, calibration fit \\
+    Final refit & \texttt{in\_training\_sample} rows re-derived over train + validation & Fit the selected model \\
+    Test & \texttt{in\_scoring\_population} rows in the test period & Final, operation-like evaluation \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Validation and test therefore measure performance exactly as the model would be used: ranking all active customers each week.
+
+\textbf{Note.} \textbf{Illustrative timeline ($H = 90$ days, weekly Mondays, $\approx$ 6-month warm-up).} Labelable snapshots run from 2010-06-07 to 2011-09-05 (66 weekly dates).
+
+\begin{center}
+\begin{tabular}{@{}p{2.6cm}p{5.5cm}p{3cm}@{}}
+    \toprule
+    Period & Snapshot dates & Weekly dates \\
+    \midrule
+    Train & 2010-06-07 $\rightarrow$ 2010-11-15 & 24 \\
+    \emph{Embargo} & \emph{90 days} & \emph{--} \\
+    Validation & 2011-02-14 $\rightarrow$ 2011-04-04 & 8 \\
+    \emph{Embargo} & \emph{90 days} & \emph{--} \\
+    Test & 2011-07-04 $\rightarrow$ 2011-09-05 & 10 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+About 24 of the 66 weekly dates are consumed by embargoes. If the test period is too short, options are a shorter $H$, a shorter warm-up, or rolling-origin validation within the training period instead of a separate validation block. The final choice is documented.
+
+\section{Final Modeling Dataset}
+\label{sec:7-10}
+
+Customer ID, snapshot date, segment flag (one-time / repeat), population flags (\texttt{in\_training\_sample}, \texttt{in\_scoring\_population}), sample weight, historical features, churn label and split assignment, produced by reproducible transformations from a single configuration.
