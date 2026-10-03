@@ -14,3 +14,4 @@
 
 - Ignore LaTeX and VS Code build artifacts in `.gitignore` ([`6bb166d`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/6bb166d))
 - Rewrite all `latex/content/*.tex` files and the title page to match `docs/strategy/README.md` ([`da29207`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/da29207))
+- Add explicit chapter/section numbers to every heading in `docs/strategy/README.md` ([`8a92da1`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/8a92da1))
