@@ -1,21 +1,105 @@
-\section{Technical Metrics}
+\section{Evaluation Framework}
+\label{sec:9-1}
 
-Model discrimination and classification quality are measured using standard technical metrics:
+Evaluate the final system on the unseen future test period using three layers: \textbf{Predictive Performance}, \textbf{Targeting Performance} and \textbf{Business Impact Estimation}. Results are reported overall and for the one-time and repeat segments.
 
-\begin{itemize}
-    \item ROC-AUC and GINI.
-    \item Precision, Recall, and F1-score.
-    \item PR-AUC (precision-recall area under the curve), which is particularly informative under class imbalance.
-\end{itemize}
+All evaluation uses the \textbf{Scoring Population}: every active customer at every weekly test date. Because the historical data contain no campaigns, suppression is not applied in the main evaluation. An optional sensitivity analysis can simulate suppression by removing customers selected in the Top-K during the previous $S$ weeks.
 
-\section{Business / Ranking Metrics}
+The same customer appears in several consecutive test weeks, so test rows are not independent. This mirrors real operations and is acceptable, but uncertainty is reported across weeks (mean $\pm$ standard deviation) or with a customer-level bootstrap rather than as if rows were independent.
 
-Since the model is ultimately used to rank and target customers, ranking-oriented metrics are reported alongside the technical metrics:
+\section{Classification Performance}
+\label{sec:9-2}
 
-\begin{itemize}
-    \item \textbf{Lift@5\% / Lift@10\%} -- how much better the top-ranked segment performs relative to the overall base rate.
-    \item \textbf{Gain@10\%} -- the proportion of all repurchasers captured within the top 10\% of ranked customers.
-    \item \textbf{Precision@10\%} -- the repurchase rate observed within the top 10\% of ranked customers.
-\end{itemize}
+ROC-AUC, PR-AUC, Precision, Recall and F1. Always report the test churn rate next to PR-AUC as its random reference. \textbf{Calibration} (reliability curve, Brier score) is required whenever probabilities are used as values, e.g.\ expected revenue at risk; Random Forest and XGBoost may need Platt or isotonic calibration fitted on the validation period.
 
-Calibration of the predicted probabilities is also assessed where relevant. The overriding evaluation criterion is the model's ability to rank customers well within the top $X\%$ that a marketing team can realistically target, rather than raw classification accuracy alone.
+\section{Ranking Performance}
+\label{sec:9-3}
+
+Precision@K, Recall@K, Lift@K and cumulative Gain. Because targeting happens \textbf{each week}, these metrics are computed \textbf{per scoring date} -- rank that week's full Scoring Population, cut the top $K\%$ -- and then summarized as mean $\pm$ standard deviation across test weeks. Pooled curves may be shown additionally but are not the primary result.
+
+\section{Risk Band Analysis}
+\label{sec:9-4}
+
+Compare actual churn rates and customer characteristics across risk bands (e.g.\ deciles) to check that higher predicted risk corresponds to higher observed churn.
+
+\section{Customer Revenue at Risk}
+\label{sec:9-5}
+
+Estimate potential future revenue associated with churners, using a customer-level proxy:
+\begin{align*}
+    \text{AvgPurchaseValue}_i &= \text{TotalRevenue}_i \div \text{PurchaseOccasions}_i \\
+    \text{RevenueAtRisk}_i &= \text{AvgPurchaseValue}_i \quad \text{(one future purchase-equivalent)}
+\end{align*}
+or, with enough history:
+\begin{equation*}
+    \text{RevenueAtRisk}_i = \text{AvgMonthlyRevenue}_i \times H \div 30
+\end{equation*}
+All inputs use history up to the snapshot date only. These are estimates of revenue exposure, not observed lost revenue.
+
+\section{Business Impact Scenario}
+\label{sec:9-6}
+
+For each target share $K \in \{10, 20, 30, 40, 50\%\}$, per scoring week: customers targeted ($N_K$), true churners captured ($TP_K$), non-churners targeted ($FP_K$), Recall@K, and revenue at risk among targeted churners.
+
+\section{Retention Effectiveness Assumption}
+\label{sec:9-7}
+
+Retention success is an assumption, not an observed result. Scenarios: \textbf{Conservative $e = 30\%$}, \textbf{Base $e = 40\%$}, \textbf{Optimistic $e = 50\%$}.
+\begin{equation*}
+    \text{RevenuePreserved} = \text{RevenueAtRisk(targeted churners)} \times e
+\end{equation*}
+
+\section{Marketing Cost and the Value of the Model}
+\label{sec:9-8}
+
+If contact cost per customer is roughly constant, targeting $K\%$ instead of everyone reduces reach cost by $(1 - K)$. This saving comes from \textbf{targeting itself}, not from the model -- any ranking at the same $K$ saves the same amount.
+
+The model's contribution is measured by comparing, \textbf{at the same $K$}, the churners captured, revenue preserved and net impact of:
+\begin{enumerate}
+    \item the final model,
+    \item the recency-rule baseline, and
+    \item random targeting.
+\end{enumerate}
+
+\section{Net Business Impact}
+\label{sec:9-9}
+
+Because preserved revenue is not profit, a margin assumption converts it before subtracting costs:
+\begin{align*}
+    \text{GrossProfitPreserved} &= \text{RevenuePreserved} \times m \\
+    \text{ContactCost} &= N_K \times c_{\text{contact}} \\
+    \text{IncentiveCost} &= (TP_K \times e + FP_K \times r) \times c_{\text{inc}} \\
+    \text{NetBusinessImpact} &= \text{GrossProfitPreserved} - \text{ContactCost} - \text{IncentiveCost}
+\end{align*}
+Here $r$ is the assumed share of targeted non-churners who redeem an incentive although they would have purchased anyway (cannibalization). Optionally report $\text{GrossProfitPreserved} \div (\text{ContactCost} + \text{IncentiveCost})$.
+
+\section{Scenario Analysis}
+\label{sec:9-10}
+
+Present a business-impact table across $K$ and $e$, with $m$, $c_{\text{contact}}$, $c_{\text{inc}}$ and $r$ stated explicitly:
+
+\begin{center}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{1.1cm}p{1.3cm}p{1.5cm}p{1.1cm}p{1.5cm}p{1.7cm}p{1.1cm}p{1.3cm}p{1.7cm}@{}}
+    \toprule
+    Target \% & Customers & Churners captured & Recall@K & Revenue at risk & Preserved (30/40/50\%) & Costs & Net impact & Net impact vs recency rule \\
+    \midrule
+    10\% & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots \\
+    20\% & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots \\
+    \ldots & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots & \ldots \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\section{Model Comparison}
+\label{sec:9-11}
+
+Compare candidates (including baselines) on predictive metrics, ranking metrics, calibration, operational targeting capacity and business-impact scenarios. Do not define a single "best" model from classification metrics alone when the objective depends on ranking and cost constraints.
+
+\section{Error Analysis and Limitations}
+\label{sec:9-12}
+
+Investigate false positives, false negatives, segments (one-time vs repeat, UK vs non-UK, wholesale-sized customers) and weeks where performance differs, including seasonal effects. State clearly that Online Retail II contains no campaign treatment/control information, so incremental revenue, causal retention effect and true campaign ROI cannot be identified. Business-impact results are scenario estimates.
+
+\textbf{Principle.} \textbf{Project-wide business-impact principle.} The model identifies and prioritizes churn risk; the retention campaign determines treatment; actual incremental revenue requires treatment/control data. Revenue at risk, revenue preserved, cost saving and net impact are simulation outputs unless supported by observed campaign outcomes.
