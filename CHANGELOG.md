@@ -16,3 +16,6 @@
 - Ignore LaTeX and VS Code build artifacts in `.gitignore` ([`6bb166d`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/6bb166d))
 - Rewrite all `latex/content/*.tex` files and the title page to match `docs/strategy/README.md` ([`da29207`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/da29207))
 - Add explicit chapter/section numbers to every heading in `docs/strategy/README.md` ([`8a92da1`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/8a92da1))
+- Ignore macOS `.DS_Store` files in `.gitignore` ([`3117eff`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/3117eff))
+- Rewrite `latex/content/data_understanding.tex` with the real computed numbers, tables and exported figures from `notebooks/06_data_understanding.ipynb` ([`a02f826`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/a02f826))
+- Rewrite `latex/content/data_preparation.tex` with the real computed numbers, tables and the embargo split timeline figure from `notebooks/07_data_preparation.ipynb`, and fix an `inf`-producing bug in the `recency_to_typical_gap` feature ([`8fa7b55`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/8fa7b55))
