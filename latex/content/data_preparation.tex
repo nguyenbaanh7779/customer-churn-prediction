@@ -1,7 +1,7 @@
 \section{Data Cleaning}
 \label{sec:7-1}
 
-Clean transaction records using documented, reproducible rules. Every rule reports how many rows and how much revenue it removes. Applying the full valid-purchase definition below to the raw dataset keeps \textbf{776,577 of 1,067,371 rows (72.8\%)} -- the per-rule breakdown (missing Customer ID 22.8\%, duplicates 3.2\%, invalid quantity/price 2.4\%, cancellations 1.8\%, non-product codes 0.6\%) was already measured in Section~\ref{sec:6-3} and is not repeated here; this chapter reuses the same \texttt{is\_valid} filter to build everything that follows.
+Clean transaction records using documented, reproducible rules. Every rule reports how many rows and how much revenue it removes. Applying the full valid-purchase definition below to the raw dataset keeps \textbf{776,577 of 1,067,371 rows (72.8\%)} -- the per-rule breakdown (missing Customer ID 22.8\%, duplicates 3.2\%, invalid quantity/price 2.4\%, cancellations 1.8\%, non-product codes 0.6\%) was already measured in Section~\ref{sec:6-4} and is not repeated here; this chapter reuses the same \texttt{is\_valid} filter to build everything that follows.
 
 \section{Valid Transaction Definition}
 \label{sec:7-2}
@@ -13,7 +13,7 @@ A \textbf{valid purchase} row must satisfy all of the following:
     \toprule
     Rule & Treatment \\
     \midrule
-    Customer ID present & Rows without Customer ID are excluded from customer history (still counted in the Section~\ref{sec:6-2} overview). \\
+    Customer ID present & Rows without Customer ID are excluded from customer history (still counted in the Section~\ref{sec:6-3} overview). \\
     Not a cancellation & Invoices starting with "C" are excluded from purchases; kept separately for cancellation features. \\
     Quantity $>$ 0 and Price $>$ 0 & Otherwise excluded. \\
     Product stock code & Non-product codes (e.g.\ postage, manual adjustments, bank charges, marketplace fees) are excluded; the final list is documented. \\
@@ -42,7 +42,7 @@ Eligibility is built in two steps.
     \item $t$ lies within the snapshot period (after warm-up; $t + H \leq$ data end for labeled rows).
 \end{enumerate}
 
-With $R_{\max} = 136.0$ days (the rounded P90 value from Section~\ref{sec:6-9}, used as the frozen configuration constant for this chapter) and a 6-month warm-up, this produces \textbf{208,764 weekly active-customer base rows}. This is 13 rows above the 208,751 reported in Section~\ref{sec:6-14}, entirely explained by rounding: the exploratory analysis there compared recency against the unrounded quantile (135.97 days), while this chapter uses the rounded $R_{\max} = 136.0$ days as the frozen pipeline configuration -- a handful of rows sit exactly at that boundary.
+With $R_{\max} = 136.0$ days (the rounded P90 value from Section~\ref{sec:6-10}, used as the frozen configuration constant for this chapter) and a 6-month warm-up, this produces \textbf{208,764 weekly active-customer base rows}. This is 13 rows above the 208,751 reported in Section~\ref{sec:6-15}, entirely explained by rounding: the exploratory analysis there compared recency against the unrounded quantile (135.97 days), while this chapter uses the rounded $R_{\max} = 136.0$ days as the frozen pipeline configuration -- a handful of rows sit exactly at that boundary.
 
 \textbf{Step 2 -- Population flags on the base table.}
 
@@ -95,7 +95,7 @@ Generate historical features using information available up to the snapshot date
 \section{Churn Label Construction}
 \label{sec:7-7}
 
-Use only the prediction window $(t,\, t+H]$ to determine churn, applying the same valid-purchase definition as Section~\ref{sec:7-2}. At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable} (their full prediction window is observed before the data end); the final, non-provisional churn rate on those rows is \textbf{48.0\%} -- matching the provisional estimate from Section~\ref{sec:6-13} exactly.
+Use only the prediction window $(t,\, t+H]$ to determine churn, applying the same valid-purchase definition as Section~\ref{sec:7-2}. At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable} (their full prediction window is observed before the data end); the final, non-provisional churn rate on those rows is \textbf{48.0\%} -- matching the provisional estimate from Section~\ref{sec:6-14} exactly.
 
 \section{Leakage Prevention}
 \label{sec:7-8}
@@ -149,7 +149,7 @@ Validation and test therefore measure performance exactly as the model would be 
 \includegraphics[width=0.85\textwidth]{figures/ch7_split_timeline.png}
 \end{center}
 
-24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 34 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Section~\ref{sec:6-13} shifts the base rate between periods, not just between individual weeks:
+24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 34 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Section~\ref{sec:6-14} shifts the base rate between periods, not just between individual weeks:
 
 \begin{center}
 \begin{tabular}{@{}p{2.6cm}p{2.3cm}p{2.6cm}p{2.3cm}@{}}

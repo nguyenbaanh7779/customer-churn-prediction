@@ -3,10 +3,61 @@
 
 Determine what the transaction data reveal about sales, customers, revenue composition, repeat purchasing, behavior, and the feasibility of churn prediction.
 
-\textbf{Note.} \textbf{Iterative link with Chapter~\ref{ch:data-preparation}.} Sections~\ref{sec:6-13}--\ref{sec:6-14} need churn labels and snapshots, which are formally built in Chapter~\ref{ch:data-preparation}. This chapter uses \textbf{provisional} labels and snapshots computed for candidate values of $H$, $R_{\max}$ and $C$. Final values are fixed in Chapter~\ref{ch:data-preparation}, following the iterative nature of the Data Science methodology.
+\textbf{Note.} \textbf{Iterative link with Chapter~\ref{ch:data-preparation}.} Sections~\ref{sec:6-14}--\ref{sec:6-15} need churn labels and snapshots, which are formally built in Chapter~\ref{ch:data-preparation}. This chapter uses \textbf{provisional} labels and snapshots computed for candidate values of $H$, $R_{\max}$ and $C$. Final values are fixed in Chapter~\ref{ch:data-preparation}, following the iterative nature of the Data Science methodology.
+
+\section{Data Specification}
+\label{sec:6-2}
+
+The raw dataset is a single flat transaction table (not pre-split into separate customer, order and product tables): each row is one product line within one invoice.
+
+\begin{center}
+\begin{tabular}{@{}p{2.6cm}p{2cm}p{10cm}@{}}
+    \toprule
+    Column & Type & Description \\
+    \midrule
+    \texttt{Invoice} & string & Invoice number. A ``C''-prefixed value (e.g.\ \texttt{C536379}) marks a cancellation of an earlier invoice; \texttt{Quantity} is negative on these rows. \\
+    \texttt{StockCode} & string & Product code. Most codes are numeric (e.g.\ \texttt{85123A}); a small set of non-numeric codes are not products at all (below). \\
+    \texttt{Description} & string & Free-text product description; can be missing or inconsistent for the same \texttt{StockCode}. \\
+    \texttt{Quantity} & integer & Units on this line. Negative for cancellations. \\
+    \texttt{InvoiceDate} & datetime & Timestamp of the transaction line. \\
+    \texttt{Price} & float & Unit price (GBP). \\
+    \texttt{Customer ID} & float & Customer identifier. Missing for a meaningful share of rows (Section~\ref{sec:6-4}) -- these cannot be attached to any customer history. \\
+    \texttt{Country} & string & Customer's country, self-reported at checkout. \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+These raw columns are renamed to the snake\_case names used throughout the pipeline (code, notebooks and the rest of this report), and two columns are derived from them:
+
+\begin{center}
+\begin{tabular}{@{}p{3cm}p{4cm}p{7.6cm}@{}}
+    \toprule
+    Raw column & Pipeline name & Notes \\
+    \midrule
+    \texttt{Invoice} & \texttt{invoice\_id} & -- \\
+    \texttt{StockCode} & \texttt{product\_id} & -- \\
+    \texttt{Description} & \texttt{product\_description} & -- \\
+    \texttt{Quantity} & \texttt{quantity} & -- \\
+    \texttt{InvoiceDate} & \texttt{invoice\_time} & -- \\
+    \texttt{Price} & \texttt{unit\_price} & -- \\
+    \texttt{Customer ID} & \texttt{customer\_id} & -- \\
+    \texttt{Country} & \texttt{country} & -- \\
+    \emph{(derived)} & \texttt{total\_price} & $= \texttt{quantity} \times \texttt{unit\_price}$ \\
+    \emph{(derived)} & \texttt{invoice\_month} & \texttt{invoice\_time} truncated to the first of its month, used for monthly aggregation \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Three value conventions recur throughout this report and are worth stating once, up front:
+
+\begin{itemize}
+    \item \textbf{Cancellation invoices.} An \texttt{invoice\_id} starting with ``C'' marks a cancellation of a previous purchase, with negative \texttt{quantity}. These rows are excluded from purchase history (Section~\ref{sec:7-2}) but kept separately to build the cancellation features in Section~\ref{sec:7-6}.
+    \item \textbf{Non-product stock codes.} A small number of \texttt{product\_id} values are not real products but operational/accounting entries -- postage (\texttt{POST}, \texttt{DOT}), manual adjustments (\texttt{M}), carriage (\texttt{C2}), discounts (\texttt{D}), samples (\texttt{S}), bank charges and similar. These are discovered empirically (Section~\ref{sec:6-4}), not assumed in advance, and are excluded from product- and customer-level analysis.
+    \item \textbf{Missing Customer ID.} Rows without a \texttt{customer\_id} cannot be attached to any customer history and are excluded from every customer-level analysis from Section~\ref{sec:6-5} onward, although they are still counted in the raw totals of Section~\ref{sec:6-3}.
+\end{itemize}
 
 \section{Dataset Overview}
-\label{sec:6-2}
+\label{sec:6-3}
 
 The raw dataset (before any cleaning) contains:
 
@@ -30,7 +81,7 @@ The raw dataset (before any cleaning) contains:
 The dataset is overwhelmingly UK-based: the \textbf{United Kingdom} accounts for 981,330 rows (91.9\%); the next largest markets are EIRE (17,866), Germany (17,624), France (14,330) and the Netherlands (5,140), each far behind the UK.
 
 \section{Data Quality}
-\label{sec:6-3}
+\label{sec:6-4}
 
 Each issue is measured on the full raw dataset (rows may overlap across rules):
 
@@ -53,7 +104,7 @@ Each issue is measured on the full raw dataset (rows may overlap across rules):
 Applying the full valid-purchase definition (Section~\ref{sec:7-2}) keeps 776,577 rows (72.76\% of raw rows) and 5,852 of the original 5,942 customers -- the remaining 90 customers' entire history consists of invalid rows and they drop out of customer-level analysis entirely. The rest of this chapter works on this valid-transaction subset.
 
 \section{Monthly Sales Performance}
-\label{sec:6-4}
+\label{sec:6-5}
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch6_monthly_revenue_customers.png}
@@ -62,14 +113,14 @@ Applying the full valid-purchase definition (Section~\ref{sec:7-2}) keeps 776,57
 Monthly revenue ranges from 442,293.59 (Feb 2011, the lowest full month) to 1,155,978.39 (Nov 2010, the highest); monthly active customers follow the same shape, peaking at 1,660 (Nov 2011). Both series show clear \textbf{seasonality}: a steady climb from mid-year, a peak in Oct--Nov (pre-Christmas ordering), and a sharp fall through Dec--Feb. The first month (Dec 2009) and the last month (Dec 2011, only 9 days of data) are partial calendar periods and should be read as such rather than as genuine dips.
 
 \section{New vs Existing Customers}
-\label{sec:6-5}
+\label{sec:6-6}
 
 Each customer's purchase occasions are ordered in time; the first occasion is \textbf{new}, every later one is \textbf{existing}. Over the full valid-transaction history (no warm-up applied here), every one of the 5,852 customers contributes exactly one new occasion (5,852 total) against 30,742 existing occasions -- repeat buying dominates occasion counts by more than 5 to 1.
 
 Monthly existing-customer counts grow steadily, from 281 (Dec 2009) to 1,501 (Nov 2011); monthly new-customer counts shrink from 951 in the first month (when every buyer is ``new'' by definition) to double digits by late 2011 (28 in Dec 2011). This is expected within a fixed two-year window: acquisition slows relative to the accumulated installed base.
 
 \section{Revenue from New and Existing Customers}
-\label{sec:6-6}
+\label{sec:6-7}
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch6_revenue_share_new_existing.png}
@@ -77,10 +128,10 @@ Monthly existing-customer counts grow steadily, from 281 (Dec 2009) to 1,501 (No
 
 The existing-customer share of monthly revenue rises quickly from 41.4\% (Dec 2009, the only month where new customers can dominate, since every buyer is new in month one) to over 80\% by mid-2010, and stays in the 88--96\% range from late 2010 onward, ending at 96.2\% in Dec 2011. Over the full period, existing-customer occasions generate 14,687,090.56 (86.0\%) of occasion revenue versus 2,381,477.41 (14.0\%) from new-customer occasions -- directly supporting the business case (Chapter~\ref{ch:business-understanding}) for prioritizing retention of existing customers over new-customer acquisition.
 
-\textbf{Note.} This is an \emph{occasion-level} split (each occasion is separately labeled new or existing). Section~\ref{sec:6-7} instead reports a \emph{customer-level} split (one-time vs.\ repeat, with all of a customer's revenue attributed to whichever group they belong to), which is why the ``new'' share here (14.0\%) differs from the ``one-time'' share there (3.3\%) -- the two percentages answer different questions and are not inconsistent.
+\textbf{Note.} This is an \emph{occasion-level} split (each occasion is separately labeled new or existing). Section~\ref{sec:6-8} instead reports a \emph{customer-level} split (one-time vs.\ repeat, with all of a customer's revenue attributed to whichever group they belong to), which is why the ``new'' share here (14.0\%) differs from the ``one-time'' share there (3.3\%) -- the two percentages answer different questions and are not inconsistent.
 
 \section{Repeat Customer Analysis}
-\label{sec:6-7}
+\label{sec:6-8}
 
 \begin{center}
 \begin{tabular}{@{}p{3cm}p{2.3cm}p{2.3cm}p{2.6cm}p{2.3cm}@{}}
@@ -96,12 +147,12 @@ The existing-customer share of monthly revenue rises quickly from 41.4\% (Dec 20
 Repeat customers are less than three-quarters of the customer base but generate 96.7\% of revenue and 95.6\% of orders -- almost all realized revenue already comes from customers who buy more than once.
 
 \section{Monthly Repurchase Analysis}
-\label{sec:6-8}
+\label{sec:6-9}
 
 The repurchase rate among eligible existing customers (customers whose first purchase was before the given month) averages 23.3\% across 24 months (Jan 2010 -- Dec 2011), ranging from 10.1\% (Dec 2011, a partial month) to 36.0\% (Mar 2010). The rate trends downward as the eligible pool grows from 951 to 5,824 customers over the window: 2011 months sit mostly in the 15--21\% range versus 25--36\% in 2010, consistent with the eligible pool accumulating lapsed customers who rarely repurchase and diluting the monthly rate.
 
 \section{Inter-Purchase Interval}
-\label{sec:6-9}
+\label{sec:6-10}
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch6_inter_purchase_interval.png}
@@ -117,10 +168,10 @@ The repurchase rate among eligible existing customers (customers whose first pur
 \end{tabular}
 \end{center}
 
-Gaps between a customer's consecutive purchase occasions are highly right-skewed (mean 52.1 days vs.\ median 25.0 days; min 0.0 days, max 714.2 days). Two candidate values for \textbf{$R_{\max}$} are carried forward: \textbf{P90 $=$ 136.0 days} (adopted as the default activity threshold for the rest of this chapter) and P95 $=$ 207.0 days (used as a sensitivity check in Section~\ref{sec:6-14}).
+Gaps between a customer's consecutive purchase occasions are highly right-skewed (mean 52.1 days vs.\ median 25.0 days; min 0.0 days, max 714.2 days). Two candidate values for \textbf{$R_{\max}$} are carried forward: \textbf{P90 $=$ 136.0 days} (adopted as the default activity threshold for the rest of this chapter) and P95 $=$ 207.0 days (used as a sensitivity check in Section~\ref{sec:6-15}).
 
 \section{Customer Monetary and Behavioral Analysis}
-\label{sec:6-10}
+\label{sec:6-11}
 
 \begin{center}
 \begin{tabular}{@{}p{3cm}p{3cm}p{3cm}p{3cm}@{}}
@@ -137,9 +188,9 @@ Gaps between a customer's consecutive purchase occasions are highly right-skewed
 Customer-level revenue, order frequency and average order value (AOV, revenue $\div$ frequency) are all heavily right-skewed (mean well above median in every column, $n = 5{,}852$). The top 1\% of customers by revenue (59 customers, revenue $\geq$ 28,631.08) are \textbf{wholesale-like}: only 1.0\% of customers but 32.1\% of total customer revenue -- consistent with the UK-retail-plus-wholesale mix already noted for this dataset in Section~\ref{sec:5-5}.
 
 \section{Customer Lifecycle}
-\label{sec:6-11}
+\label{sec:6-12}
 
-Stages are illustrative, based on recency as of the last observed date and $R_{\max}$ (P90, from Section~\ref{sec:6-9}) -- not a final definition.
+Stages are illustrative, based on recency as of the last observed date and $R_{\max}$ (P90, from Section~\ref{sec:6-10}) -- not a final definition.
 
 \begin{center}
 \includegraphics[width=0.75\textwidth]{figures/ch6_lifecycle_stage_bar.png}
@@ -169,7 +220,7 @@ Stages are illustrative, based on recency as of the last observed date and $R_{\
 Over the 79 weekly snapshots (Jun 2010 -- Dec 2011), the One-time share drifts down from $\approx$44\% to $\approx$28\% while Lapsed grows from near 0\% to $\approx$15--18\% by the end of the window -- expected within a fixed-length observation period, where cohorts age and genuinely new one-time buyers become rarer relative to the accumulated base.
 
 \section{RFM Exploration}
-\label{sec:6-12}
+\label{sec:6-13}
 
 \begin{center}
 \begin{tabular}{@{}p{3cm}p{3cm}p{3cm}p{3cm}@{}}
@@ -199,7 +250,7 @@ Grouping customers into frequency deciles and averaging recency and monetary val
 Customers who buy more often also buy more recently and spend far more per customer -- directly motivating RFM-style features for the churn model.
 
 \section{Churn Exploration}
-\label{sec:6-13}
+\label{sec:6-14}
 
 Using provisional labels ($H = 90$ days, $R_{\max} =$ P90 $= 136.0$ days): of 208,751 weekly active snapshot rows, 172,550 are labelable (their full prediction window is observed before the data end). The provisional overall churn rate is \textbf{48.0\%} -- with many one-time buyers, churn is close to the \emph{majority} class here, not a rare event, which changes how PR-AUC and Precision should be read (Section~\ref{sec:3-14}/Chapter~\ref{ch:evaluation}).
 
@@ -226,7 +277,7 @@ Churn rate falls sharply and monotonically with both monetary and frequency deci
 This strong univariate separation is an encouraging sign for predictive feasibility and reinforces the case for RFM-style features.
 
 \section{Snapshot Population and Design Feasibility}
-\label{sec:6-14}
+\label{sec:6-15}
 
 \textbf{1. Snapshot scheme comparison.}
 
@@ -284,7 +335,7 @@ The weekly Scoring Population -- the pool from which marketing selects Top-K eac
 All three candidates clear the $\geq 8$ test-week bar, but $H = 120$ leaves only 10 training weeks, too thin to be practical, while $H = 60$'s shorter horizon is less useful operationally. \textbf{$H = 90$ (24 training weeks) is the best-supported choice}, matching the illustrative timeline already used in Section~\ref{sec:7-9}.
 
 \section{Key Findings}
-\label{sec:6-15}
+\label{sec:6-16}
 
 \textbf{Revenue composition.} Repeat customers are 72.3\% of customers (4,234 of 5,852) but generate 96.7\% of revenue and 95.6\% of orders -- existing-customer retention is where almost all the revenue already is, which is the direct business case for this project.
 

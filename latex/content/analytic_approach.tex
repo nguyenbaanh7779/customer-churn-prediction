@@ -36,7 +36,7 @@ For customer $i$ at snapshot date $t$:
     \text{Churn}(i, t) &= 1 \quad \text{if no valid purchase occurs in } (t,\, t+H] \\
     \text{Churn}(i, t) &= 0 \quad \text{otherwise}
 \end{align*}
-$H$ is the prediction horizon, informed by observed inter-purchase behavior (Section~\ref{sec:6-9}).
+$H$ is the prediction horizon, informed by observed inter-purchase behavior (Section~\ref{sec:6-10}).
 
 \textbf{Label availability rule:} a snapshot can be labeled only if its full prediction window is observed, i.e.\ $t + H \leq \text{data end date}$. Snapshots after this date can be scored but not evaluated.
 
@@ -149,13 +149,13 @@ All design parameters live in a single configuration and are reported in the fin
     \toprule
     Parameter & Symbol & Initial candidate & Decided in \\
     \midrule
-    Prediction horizon & $H$ & 60 / 90 / 120 days & Sections~\ref{sec:6-9}, \ref{sec:6-14} \\
-    Activity threshold & $R_{\max}$ & High percentile of inter-purchase gap (e.g.\ P90--P95) & Sections~\ref{sec:6-9}, \ref{sec:6-14} \\
-    Training-episode cooldown & $C$ & $= H$ (fixed); alternative: reset on purchase & Sections~\ref{sec:6-14}, \ref{sec:8-10} \\
+    Prediction horizon & $H$ & 60 / 90 / 120 days & Sections~\ref{sec:6-10}, \ref{sec:6-15} \\
+    Activity threshold & $R_{\max}$ & High percentile of inter-purchase gap (e.g.\ P90--P95) & Sections~\ref{sec:6-10}, \ref{sec:6-15} \\
+    Training-episode cooldown & $C$ & $= H$ (fixed); alternative: reset on purchase & Sections~\ref{sec:6-15}, \ref{sec:8-10} \\
     Training sampling scheme & -- & Episode (main) vs. all weekly + weights (ablation) & Section~\ref{sec:8-10} \\
     Suppression period (operations) & $S$ & e.g.\ 4--8 weeks after contact & Section~\ref{sec:10-5} \\
     Scoring cadence & -- & Weekly (Monday) & Section~\ref{sec:3-8} \\
-    Feature warm-up & -- & $\approx$ 6 months of history before first snapshot & Section~\ref{sec:6-14} \\
+    Feature warm-up & -- & $\approx$ 6 months of history before first snapshot & Section~\ref{sec:6-15} \\
     Split embargo & -- & $= H$ & Section~\ref{sec:7-9} \\
     Target share & $K$ & 10 / 20 / 30 / 40 / 50\% & Section~\ref{sec:9-6} \\
     Retention effectiveness & $e$ & 30 / 40 / 50\% & Section~\ref{sec:9-7} \\
