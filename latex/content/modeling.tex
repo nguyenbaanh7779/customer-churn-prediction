@@ -1,7 +1,7 @@
 \section{Modeling Objective}
 \label{sec:8-1}
 
-Estimate $P(\text{Churn} = 1 \mid \text{Customer History at Snapshot})$.
+Estimate $P(\text{Churn} = 1 \mid \text{Customer History at Snapshot})$ on the final modeling dataset built in Chapter~\ref{ch:data-preparation} (\texttt{modeling\_dataset\_h90.parquet}). Per the Section~\ref{sec:7-9} split table, \textbf{Train} is \texttt{in\_training\_sample} rows within \texttt{split=="train"} (6,453 rows, 46.7\% churn); \textbf{Validation} is every row in \texttt{split=="validation"} (21,514 rows, 52.9\% churn); \textbf{Test} is every row in \texttt{split=="test"} (24,252 rows, 40.1\% churn). The three periods have noticeably different churn base rates -- a direct consequence of the seasonality already documented in Section~\ref{sec:6-14}.
 
 \section{Baselines}
 \label{sec:8-2}
@@ -13,60 +13,170 @@ Estimate $P(\text{Churn} = 1 \mid \text{Customer History at Snapshot})$.
     \midrule
     Random ranking & Reference for Lift $= 1$ and PR-AUC $=$ churn rate. \\
     Recency rule & Rank customers by recency (longest since last purchase first). A strong, business-realistic rule the models must beat. \\
-    Optional: RFM score rule & Rank by a simple combined RFM score. \\
     \bottomrule
 \end{tabular}
 \end{center}
 
+\begin{center}
+\begin{tabular}{@{}p{3.2cm}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}@{}}
+    \toprule
+    Baseline & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
+    \midrule
+    Random & 0.495 & 0.527 & 0.535 & 1.012 \\
+    Recency rule & 0.673 & 0.673 & 0.731 & 1.382 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Random ranking lands exactly where expected (ROC-AUC $\approx 0.5$, Lift $\approx 1$). The recency rule alone -- no learned parameters -- is already a credible targeting signal (Lift@10\% $= 1.38$): every model below must clear this bar to justify the added complexity of training and maintaining a classifier.
+
 \section{RFM Model}
 \label{sec:8-3}
 
-A model using Recency, Frequency and Monetary features.
+A Logistic Regression using only Recency, Frequency and Monetary features (no missing values, no imputation needed), trained on the episode-sampled Training Population and scored on validation:
+
+\begin{center}
+\begin{tabular}{@{}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}@{}}
+    \toprule
+    ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
+    \midrule
+    0.770 & 0.748 & 0.801 & 1.516 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Already well above both baselines (Lift@10\% $1.52$ vs.\ $1.38$ for the recency rule).
 
 \section{Extended Feature Model}
 \label{sec:8-4}
 
-Add behavioral and temporal features to test whether richer history improves prediction.
+Add purchase-behavior and temporal features (average order value, tenure, mean inter-purchase gap, recency relative to that gap, activity in the last 90 days). the two gap-based features are \texttt{NaN} for customers with only one occasion so far; a median imputer fit on the training rows only handles this.
+
+\begin{center}
+\begin{tabular}{@{}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}@{}}
+    \toprule
+    ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
+    \midrule
+    0.766 & 0.743 & 0.794 & 1.502 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Note.} Every metric is marginally \emph{lower} than the RFM-only model, not higher. With only 6,453 episode-sampled training rows, the five added features add noise at least as fast as signal for a linear model -- this motivates checking Random Forest/XGBoost in Section~\ref{sec:8-6}, which can model interactions the added features might carry.
 
 \section{Full Feature Model}
 \label{sec:8-5}
 
-Add product and cancellation features where supported.
+Add product- and cancellation-behavior features (distinct products so far, cancellation count and value share so far):
+
+\begin{center}
+\begin{tabular}{@{}p{2.6cm}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}@{}}
+    \toprule
+    Feature set & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
+    \midrule
+    RFM & 0.770 & 0.748 & 0.801 & 1.516 \\
+    Extended & 0.766 & 0.743 & 0.794 & 1.502 \\
+    Full & 0.766 & 0.744 & 0.789 & 1.492 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Across all three feature sets, performance is essentially flat (ROC-AUC within 0.004, Lift@10\% within 0.024) -- for a linear model on this training population, RFM alone already captures nearly all of the separable signal. The Full feature set is still carried forward to Section~\ref{sec:8-6} so the richer features get a fair chance under algorithms that can exploit non-linear interactions.
 
 \section{Algorithms}
 \label{sec:8-6}
 
-Compare Logistic Regression, Random Forest and XGBoost.
+Compare Logistic Regression, Random Forest and XGBoost on the Full feature set, reasonable default hyperparameters, same train/validation split:
+
+\begin{center}
+\begin{tabular}{@{}p{3.6cm}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}@{}}
+    \toprule
+    Algorithm & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
+    \midrule
+    \textbf{Logistic Regression} & \textbf{0.766} & \textbf{0.744} & 0.789 & 1.492 \\
+    Random Forest & 0.763 & 0.736 & 0.786 & 1.487 \\
+    XGBoost & 0.714 & 0.697 & 0.762 & 1.441 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Logistic Regression wins on every metric. With only 6,453 training rows and 11 features, the tree ensembles -- Random Forest in particular, and more so XGBoost -- have less room to find reliable non-linear splits than they would with more data; the simpler linear model generalizes better here. \textbf{Logistic Regression on the Full feature set is carried forward} to hyperparameter tuning.
 
 \section{Hyperparameter Tuning}
 \label{sec:8-7}
 
-Tune on the validation period while preserving temporal separation. Validation metrics are computed on the Scoring Population. After selection, \textbf{retrain the chosen configuration on the Training Population re-derived over train + validation} (respecting the embargo before the test period) and evaluate once on the test Scoring Population.
+Tune on the validation period while preserving temporal separation (fit on train, select by validation PR-AUC -- not a cross-validated search, which would break the temporal/episode structure):
+
+\begin{center}
+\begin{tabular}{@{}p{1.8cm}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}@{}}
+    \toprule
+    $C$ & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
+    \midrule
+    \textbf{0.01} & \textbf{0.770} & \textbf{0.748} & 0.791 & 1.496 \\
+    0.1 & 0.767 & 0.745 & 0.784 & 1.484 \\
+    1.0 & 0.766 & 0.744 & 0.789 & 1.492 \\
+    10.0 & 0.766 & 0.744 & 0.790 & 1.495 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+$C = 0.01$ (the strongest regularization tried) wins on PR-AUC -- consistent with Section~\ref{sec:8-4}/\ref{sec:8-5}'s finding that the extra features mostly add noise for this training-set size; heavier regularization suppresses that noise.
+
+After selection, the Training Population is \textbf{re-derived over train + validation}: the eligibility-episode rule (Section~\ref{sec:3-9}) is re-applied to every active row between the first train date and the last validation date (not simply the union of the two periods' original flags), giving 12,019 training rows -- nearly double the 6,453 used so far, since the cooldown restarts over a longer window. Retraining $C=0.01$ Logistic Regression on this pool and evaluating \textbf{once} on test:
+
+\begin{center}
+\begin{tabular}{@{}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}p{1.8cm}@{}}
+    \toprule
+    ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% & Gain@10\% \\
+    \midrule
+    0.764 & 0.659 & 0.773 & 1.929 & 0.193 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+ROC-AUC on test (0.764) closely matches validation (0.770) -- no meaningful overfitting from the refit. PR-AUC is lower on test (0.659 vs.\ 0.748) because the test period's churn rate is lower (40.1\% vs.\ 52.9\% validation) and PR-AUC's baseline moves with the base rate; Lift@10\% (which normalizes for base rate) is actually \emph{higher} on test (1.93 vs.\ 1.50 on validation), confirming the model's ranking ability holds up out of sample.
 
 \section{Model Selection}
 \label{sec:8-8}
 
-Select the final model using predictive and ranking performance, with particular attention to Top-K targeting metrics at the operating $K$.
+The final model is \textbf{Logistic Regression, Full feature set, $C = 0.01$}, refit on the train+validation Training Population (12,019 rows) and evaluated once on test. It was selected over Random Forest and XGBoost on validation PR-AUC (Section~\ref{sec:8-6}) despite neither tree ensemble improving on it -- with only a few thousand training rows, the added model capacity did not pay off. The RFM-only feature set (Section~\ref{sec:8-3}) was statistically indistinguishable from the Full set, but Full was retained for the final model since it is evaluated here under the stronger regularization ($C=0.01$) found in tuning, which absorbs the extra features' noise rather than requiring they be dropped by hand. On test, the final model reaches \textbf{Lift@10\% $= 1.93$} and \textbf{Gain@10\% $= 0.193$} -- targeting the top 10\% of ranked customers each week would reach churners at nearly twice the rate of untargeted outreach, capturing 19.3\% of all churners in that 10\% of the population.
 
 \section{Model Interpretability}
 \label{sec:8-9}
 
-Feature importance and, where appropriate, global/local explanations (e.g.\ SHAP). Findings are described as associations, not causes.
+SHAP values for the final refit model (\texttt{LinearExplainer}, computed on a sample of 1,000 test rows):
+
+\begin{center}
+\includegraphics[width=0.85\textwidth]{figures/ch8_shap_summary.png}
+\end{center}
+
+By mean absolute SHAP value, the most influential features are \texttt{frequency\_so\_far} and \texttt{monetary\_so\_far} (the two RFM features driving most of the model's separating power, consistent with Sections~\ref{sec:8-3}--\ref{sec:8-5}), followed by the mean inter-purchase gap, cancellation count, and recent activity features. The directions match intuition: higher frequency and monetary value push the prediction toward \emph{not} churning; a longer typical gap between purchases, more cancellations, and low recent activity all push toward churning. \texttt{recency\_to\_typical\_gap} shows the widest spread for its most extreme values (customers far more overdue than their own normal rhythm), the clearest individual red flag in the tail. \textbf{These are associations the model has learned, not causal effects} (Section~\ref{sec:3-14}) -- a high cancellation count predicting churn, for instance, does not mean cancellations cause churn.
 
 \section{Training Population Ablation}
 \label{sec:8-10}
 
-Compare two training schemes for the selected algorithm and feature set, both evaluated on the \textbf{same} test Scoring Population:
+Compare two training schemes for the selected model (Logistic Regression, Full features, $C=0.01$), both trained on the \textbf{train period only} (not the extended refit pool from Section~\ref{sec:8-7}) and evaluated on the \textbf{same test set}:
 
 \begin{center}
 \begin{tabular}{@{}p{4.5cm}p{9.6cm}@{}}
     \toprule
     Scheme & Training rows \\
     \midrule
-    A -- Episode (main) & \texttt{in\_training\_sample} rows, unweighted \\
-    B -- All weekly, weighted & All weekly active rows in the training period, weighted by \texttt{sample\_weight} \\
+    A -- Episode (main) & \texttt{in\_training\_sample} rows, unweighted (6,453 rows) \\
+    B -- All weekly, weighted & All weekly active rows in the training period, weighted by \texttt{sample\_weight} (61,415 rows) \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-If A matches B on PR-AUC and weekly Lift@K, the episode rule reduces training data and redundancy without losing predictive quality. If B is clearly better, report it and discuss the trade-off.
+\begin{center}
+\begin{tabular}{@{}p{3.2cm}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}@{}}
+    \toprule
+    Scheme & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
+    \midrule
+    A -- Episode & 0.750 & 0.631 & 0.716 & 1.787 \\
+    B -- Weighted all & 0.755 & 0.649 & 0.766 & 1.912 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{B is clearly better} on every metric, using $9.5\times$ more rows (61,415 vs.\ 6,453). The episode rule still serves its purpose -- cutting near-duplicate rows and training time by over 90\% (Section~\ref{sec:6-15}) -- but for this dataset's size, that reduction costs some predictive quality: with so few customers and snapshots to begin with, discarding the correlated-but-informative extra rows removes more signal than it removes redundancy. For production use at this data volume, \textbf{Scheme B (all weekly active rows, weighted)} is the better default; the episode scheme remains attractive mainly as the data volume grows and training cost becomes the binding constraint.
