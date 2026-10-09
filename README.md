@@ -35,8 +35,7 @@ python app/save_artefacts.py      # saves model.pkl, imputer.pkl, scaler.pkl
 
 **Run the app:**
 ```bash
-streamlit run app/app.py
-# → opens at http://localhost:8501
+python app/save_artefacts.py# → opens at http://localhost:8501
 ```
 
 **What it does:**  

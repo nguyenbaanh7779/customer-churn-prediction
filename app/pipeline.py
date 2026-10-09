@@ -184,10 +184,11 @@ def build_features(clean: pd.DataFrame, occ: pd.DataFrame,
     gap_df = pd.DataFrame(gaps)
     active = active.merge(gap_df, on="customer_id", how="left")
 
-    # Recency-to-typical-gap ratio
+    # Recency-to-typical-gap ratio — cap at 20 to avoid extreme values going
+    # into log1p later (recency >> typical gap is already "very overdue")
     active["recency_to_typical_gap"] = (
         active["recency_days"] / active["mean_gap_so_far"].replace(0, np.nan)
-    )
+    ).clip(upper=20.0)
 
     # Activity in last 90 days
     cutoff_90 = snap - pd.Timedelta(days=90)
@@ -250,7 +251,9 @@ def score_and_rank(features_df: pd.DataFrame,
     X = features_df[FULL_FEATURES].copy()
     for col in LOG_FEATURES:
         if col in X.columns:
-            X[col] = np.log1p(X[col])
+            X[col] = np.log1p(X[col].clip(lower=0, upper=1e9))
+    # guard: replace any inf/-inf with nan before imputer
+    X.replace([np.inf, -np.inf], np.nan, inplace=True)
 
     X_imp    = imputer.transform(X)
     X_scaled = scaler.transform(X_imp)
@@ -305,7 +308,9 @@ def bootstrap_churn_ci(features_df: pd.DataFrame,
     X = features_df[FULL_FEATURES].copy()
     for col in LOG_FEATURES:
         if col in X.columns:
-            X[col] = np.log1p(X[col])
+            X[col] = np.log1p(X[col].clip(lower=0, upper=1e9))
+    # guard: replace any inf/-inf with nan before imputer
+    X.replace([np.inf, -np.inf], np.nan, inplace=True)
     X_imp    = imputer.transform(X)
     X_scaled = scaler.transform(X_imp)
 

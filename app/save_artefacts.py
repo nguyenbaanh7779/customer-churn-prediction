@@ -33,7 +33,7 @@ LOG_FEATURES = {
 
 ARTEFACT_DIR = Path(__file__).parent / "model_artefacts"
 ARTEFACT_DIR.mkdir(exist_ok=True)
-DATA_PATH    = Path(__file__).parent.parent / "data" / "processed" / "modeling_dataset_h90.parquet"
+DATA_PATH    = Path(__file__).parent.parent / "data" / "raw" / "modeling_dataset_h90.parquet"
 
 
 def apply_episode_cooldown(active_grid, cooldown_days):
@@ -53,7 +53,10 @@ def prepare_X(df, features):
     X = df[features].copy()
     for col in features:
         if col in LOG_FEATURES:
-            X[col] = np.log1p(X[col])
+            # clip negatives and large values before log to avoid -inf / inf
+            X[col] = np.log1p(X[col].clip(lower=0, upper=1e9))
+    # replace any remaining inf / -inf with nan (imputer will fill them)
+    X.replace([np.inf, -np.inf], np.nan, inplace=True)
     return X
 
 
