@@ -23,6 +23,31 @@ See [docs/guide/README.md](docs/guide/README.md) for:
 - setting up the Python environment used by the notebooks
 - installing and compiling the LaTeX report
 
+## Streamlit Scoring App
+
+The `app/` directory contains a working deployment demo.
+
+**One-time setup** (after running notebook 08/09):
+```bash
+pip install -r requirements.txt
+python app/save_artefacts.py      # saves model.pkl, imputer.pkl, scaler.pkl
+```
+
+**Run the app:**
+```bash
+streamlit run app/app.py
+# → opens at http://localhost:8501
+```
+
+**What it does:**  
+Full chain in one click: raw transactions → cleaning → feature engineering → model scoring → risk ranking → retention target list with 90% confidence intervals.
+
+Four tabs:
+- **Pipeline Summary** — run stats, step-by-step trace, risk band breakdown
+- **Risk Dashboard** — churn probability distribution, revenue at risk by band, top-20 customers with CI bars, segment comparison
+- **Target List** — filterable/sortable table, CSV download for campaign platform
+- **Customer Lookup** — individual customer profile, key features, probability gauge with CI
+
 ## Status
 
 Early stage — data exploration is in progress; the report structure is in place and being filled in section by section.
