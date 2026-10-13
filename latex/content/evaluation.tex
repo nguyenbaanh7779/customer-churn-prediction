@@ -106,7 +106,7 @@ All inputs use history up to the snapshot date only. These are estimates of reve
 \end{tabular}
 \end{center}
 
-Revenue at risk is as right-skewed as the underlying order-value distribution (Section~\ref{sec:6-11}) -- a small number of high-value customers carry disproportionate weight in the business-impact totals that follow.
+Revenue at risk is as right-skewed as the underlying order-value distribution (Section~\ref{sec:6-10}) -- a small number of high-value customers carry disproportionate weight in the business-impact totals that follow.
 
 \section{Business Impact Scenario}
 \label{sec:9-6}
@@ -284,6 +284,6 @@ Targeting the top 10\% by the final model's score, pooled across the test period
 \end{tabular}
 \end{center}
 
-Three patterns stand out. \textbf{One-time customers} are missed far more often than repeat customers (55.5\% vs.\ 34.1\% FN rate) -- with only one purchase occasion, their feature history is thin, and the model has less signal to work with (consistent with Section~\ref{sec:6-11}'s One-time lifecycle stage). \textbf{Non-UK customers} see a higher false-positive rate (29.4\% vs.\ 22.3\% for UK) -- the model, trained overwhelmingly on UK behavior (Section~\ref{sec:6-3}), generalizes a little less cleanly to the small non-UK population. \textbf{Wholesale-like customers} (Section~\ref{sec:6-11}) are the model's strongest case: a 7.8\% false-negative rate, far below retail's 37.2\%, and none were false positives in the targeted top 10\% -- their high, frequent purchase volume makes their churn signal unusually clear.
+Three patterns stand out. \textbf{One-time customers} are missed far more often than repeat customers (55.5\% vs.\ 34.1\% FN rate) -- with only one purchase occasion, their feature history is thin, and the model has less signal to work with (consistent with Section~\ref{sec:6-10}'s One-time lifecycle stage). \textbf{Non-UK customers} see a higher false-positive rate (29.4\% vs.\ 22.3\% for UK) -- the model, trained overwhelmingly on UK behavior (Section~\ref{sec:6-3}), generalizes a little less cleanly to the small non-UK population. \textbf{Wholesale-like customers} (Section~\ref{sec:6-10}) are the model's strongest case: a 7.8\% false-negative rate, far below retail's 37.2\%, and none were false positives in the targeted top 10\% -- their high, frequent purchase volume makes their churn signal unusually clear.
 
 \textbf{Principle.} \textbf{Project-wide business-impact principle.} The model identifies and prioritizes churn risk; the retention campaign determines treatment; actual incremental revenue requires treatment/control data. Revenue at risk, revenue preserved, cost saving and net impact are simulation outputs unless supported by observed campaign outcomes.

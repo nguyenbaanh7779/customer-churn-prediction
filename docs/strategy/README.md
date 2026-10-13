@@ -127,7 +127,7 @@ Churn(i, t) = 1  if no valid purchase occurs in (t, t + H]
 Churn(i, t) = 0  otherwise
 :::
 
-*H* is the prediction horizon, informed by observed inter-purchase behavior (6.9).
+*H* is the prediction horizon, informed by observed inter-purchase behavior (6.8).
 
 **Label availability rule:** a snapshot can be labeled only if its full prediction window is observed, i.e. *t + H ≤ data end date*. Snapshots after this date can be scored but not evaluated.
 
@@ -210,13 +210,13 @@ All design parameters live in a single configuration and are reported in the fin
 
 | Parameter | Symbol | Initial candidate | Decided in |
 |----------------------|----------|-------------------------------------|------------|
-| Prediction horizon | H | 60 / 90 / 120 days | 6.9, 6.14 |
-| Activity threshold | R~max~ | High percentile of inter-purchase gap (e.g. P90–P95) | 6.9, 6.14 |
-| Training-episode cooldown | C | = H (fixed); alternative: reset on purchase | 6.14, 8.10 |
+| Prediction horizon | H | 60 / 90 / 120 days | 6.8, 6.13 |
+| Activity threshold | R~max~ | High percentile of inter-purchase gap (e.g. P90–P95) | 6.8, 6.13 |
+| Training-episode cooldown | C | = H (fixed); alternative: reset on purchase | 6.13, 8.10 |
 | Training sampling scheme | — | Episode (main) vs. all weekly + weights (ablation) | 8.10 |
 | Suppression period (operations) | S | e.g. 4–8 weeks after contact | 10.5 |
 | Scoring cadence | — | Weekly (Monday) | 3.8 |
-| Feature warm-up | — | ≈ 6 months of history before first snapshot | 6.14 |
+| Feature warm-up | — | ≈ 6 months of history before first snapshot | 6.13 |
 | Split embargo | — | = H | 7.9 |
 | Target share | K | 10 / 20 / 30 / 40 / 50% | 9.6 |
 | Retention effectiveness | e | 30 / 40 / 50% | 9.7 |
@@ -280,7 +280,7 @@ Transactions may be generated continuously while the analytical platform ingests
 
 Online Retail II is the historical extract used for experimentation, and the report transparently identifies it as a public dataset. Properties that affect the design:
 
-- It covers roughly **two years** (December 2009 – December 2011), which limits the number of labelable weekly snapshots (see 6.14, 7.9).
+- It covers roughly **two years** (December 2009 – December 2011), which limits the number of labelable weekly snapshots (see 6.13, 7.9).
 - The retailer is UK-based and many customers are **wholesalers/businesses**, so spend per customer is highly heterogeneous.
 - Demand is strongly **seasonal**, with a peak before Christmas.
 
@@ -291,7 +291,7 @@ Online Retail II is the historical extract used for experimentation, and the rep
 Determine what the transaction data reveal about sales, customers, revenue composition, repeat purchasing, behavior, and the feasibility of churn prediction.
 
 ::: {.note}
-**Iterative link with Chapter 7.** Sections 6.13–6.14 need churn labels and snapshots, which are formally built in Chapter 7. This chapter uses **provisional** labels and snapshots computed for candidate values of H, R~max~ and C. Final values are fixed in Chapter 7, following the iterative nature of the Data Science methodology.
+**Iterative link with Chapter 7.** Sections 6.12–6.13 need churn labels and snapshots, which are formally built in Chapter 7. This chapter uses **provisional** labels and snapshots computed for candidate values of H, R~max~ and C. Final values are fixed in Chapter 7, following the iterative nature of the Data Science methodology.
 :::
 
 ## 6.2 Dataset Overview
@@ -306,43 +306,39 @@ Missing values (especially Customer ID), duplicate records, invalid Quantity/Pri
 
 Monthly customers, orders, quantity and revenue to understand sales dynamics and seasonality.
 
-## 6.5 New vs Existing Customers
+## 6.5 New vs Existing Customers and Revenue
 
-Classify customers by whether the period contains their first valid purchase or a subsequent one. Compare counts and revenue contribution.
+Classify customers by whether the period contains their first valid purchase or a subsequent one. Compare monthly shares of active customers and of revenue (New Customer Revenue, Existing Customer Revenue, Total Revenue). This directly supports the business case for retaining existing customers.
 
-## 6.6 Revenue from New and Existing Customers
-
-New Customer Revenue, Existing Customer Revenue, Total Revenue and monthly shares. This directly supports the business case for retaining existing customers.
-
-## 6.7 Repeat Customer Analysis
+## 6.6 Repeat Customer Analysis
 
 One-time versus repeat customers: counts, shares, orders and revenue contribution.
 
-## 6.8 Monthly Repurchase Analysis
+## 6.7 Monthly Repurchase Analysis
 
 Eligible existing customers, repeat buyers and repurchase rate by month.
 
-## 6.9 Inter-Purchase Interval
+## 6.8 Inter-Purchase Interval
 
 Time between consecutive purchase occasions: mean, median, percentiles and distribution. Results inform **H** and **R~max~**.
 
-## 6.10 Customer Monetary and Behavioral Analysis
+## 6.9 Customer Monetary and Behavioral Analysis
 
 Customer revenue, order frequency, quantity, average order value and behavioral heterogeneity (including the influence of large wholesale customers).
 
-## 6.11 Customer Lifecycle
+## 6.10 Customer Lifecycle
 
 Progression from first purchase to repeat purchase, active behavior, increasing recency, at-risk behavior and potential churn.
 
-## 6.12 RFM Exploration
+## 6.11 RFM Exploration
 
 Recency, Frequency and Monetary distributions and their relationship with subsequent purchasing.
 
-## 6.13 Churn Exploration
+## 6.12 Churn Exploration
 
 Using provisional labels: churn rate over time and across recency, frequency, monetary value and other characteristics. **Report the overall churn rate early** — with many one-time buyers, churn may be the *majority* class, which changes how PR-AUC and Precision should be read.
 
-## 6.14 Snapshot Population and Design Feasibility
+## 6.13 Snapshot Population and Design Feasibility
 
 1. Compare daily, weekly-all and weekly episode-based snapshots: number of rows, rows per customer, share of near-duplicate rows, and class distribution. This quantifies why daily snapshots are rejected and how much the episode rule reduces training redundancy.
 2. Show the effect of the activity condition (R~max~) on population size and churn rate.
@@ -351,7 +347,7 @@ Using provisional labels: churn rate over time and across recency, frequency, mo
 
 Use the evidence to justify weekly batch scoring, the training-episode cooldown, R~max~ and the final H.
 
-## 6.15 Key Findings
+## 6.14 Key Findings
 
 Business-oriented findings on revenue composition, repeat purchasing, customer heterogeneity, purchase intervals, churn behavior, data limitations and the chosen snapshot/prediction-window design.
 
