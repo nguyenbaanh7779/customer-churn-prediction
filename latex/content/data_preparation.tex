@@ -42,7 +42,7 @@ Eligibility is built in two steps.
     \item $t$ lies within the snapshot period (after warm-up; $t + H \leq$ data end for labeled rows).
 \end{enumerate}
 
-With $R_{\max} = 136.0$ days (the rounded P90 value from Section~\ref{sec:6-9}, used as the frozen configuration constant for this chapter) and a 6-month warm-up, this produces \textbf{208,764 weekly active-customer base rows}. This is 13 rows above the 208,751 reported in Section~\ref{sec:6-14}, entirely explained by rounding: the exploratory analysis there compared recency against the unrounded quantile (135.97 days), while this chapter uses the rounded $R_{\max} = 136.0$ days as the frozen pipeline configuration -- a handful of rows sit exactly at that boundary.
+With $R_{\max} = 136.0$ days (the rounded P90 value from Section~\ref{sec:6-8}, used as the frozen configuration constant for this chapter) and a 6-month warm-up, this produces \textbf{208,764 weekly active-customer base rows}. This is 13 rows above the 208,751 reported in Section~\ref{sec:6-13}, entirely explained by rounding: the exploratory analysis there compared recency against the unrounded quantile (135.97 days), while this chapter uses the rounded $R_{\max} = 136.0$ days as the frozen pipeline configuration -- a handful of rows sit exactly at that boundary.
 
 \textbf{Step 2 -- Population flags on the base table.}
 
@@ -95,7 +95,7 @@ Generate historical features using information available up to the snapshot date
 \section{Churn Label Construction}
 \label{sec:7-7}
 
-Use only the prediction window $(t,\, t+H]$ to determine churn, applying the same valid-purchase definition as Section~\ref{sec:7-2}. At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable} (their full prediction window is observed before the data end); the final, non-provisional churn rate on those rows is \textbf{48.0\%} -- matching the provisional estimate from Section~\ref{sec:6-13} exactly.
+Use only the prediction window $(t,\, t+H]$ to determine churn, applying the same valid-purchase definition as Section~\ref{sec:7-2}. At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable} (their full prediction window is observed before the data end); the final, non-provisional churn rate on those rows is \textbf{48.0\%} -- matching the provisional estimate from Section~\ref{sec:6-12} exactly.
 
 \section{Leakage Prevention}
 \label{sec:7-8}
@@ -149,7 +149,7 @@ Validation and test therefore measure performance exactly as the model would be 
 \includegraphics[width=0.85\textwidth]{figures/ch7_split_timeline.png}
 \end{center}
 
-24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 34 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Section~\ref{sec:6-13} shifts the base rate between periods, not just between individual weeks:
+24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 34 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Section~\ref{sec:6-12} shifts the base rate between periods, not just between individual weeks:
 
 \begin{center}
 \begin{tabular}{@{}p{2.6cm}p{2.3cm}p{2.6cm}p{2.3cm}@{}}

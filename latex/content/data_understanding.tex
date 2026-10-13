@@ -3,7 +3,7 @@
 
 Determine what the transaction data reveal about sales, customers, revenue composition, repeat purchasing, behavior, and the feasibility of churn prediction.
 
-\textbf{Note.} \textbf{Iterative link with Chapter~\ref{ch:data-preparation}.} Sections~\ref{sec:6-13}--\ref{sec:6-14} need churn labels and snapshots, which are formally built in Chapter~\ref{ch:data-preparation}. This chapter uses \textbf{provisional} labels and snapshots computed for candidate values of $H$, $R_{\max}$ and $C$. Final values are fixed in Chapter~\ref{ch:data-preparation}, following the iterative nature of the Data Science methodology.
+\textbf{Note.} \textbf{Iterative link with Chapter~\ref{ch:data-preparation}.} Sections~\ref{sec:6-12}--\ref{sec:6-13} need churn labels and snapshots, which are formally built in Chapter~\ref{ch:data-preparation}. This chapter uses \textbf{provisional} labels and snapshots computed for candidate values of $H$, $R_{\max}$ and $C$. Final values are fixed in Chapter~\ref{ch:data-preparation}, following the iterative nature of the Data Science methodology.
 
 \section{Data Specification}
 \label{sec:6-2}
@@ -143,13 +143,8 @@ Each customer's purchase occasions are ordered in time; the first occasion is \t
 
 Repeat customers are less than three-quarters of the customer base but generate 96.7\% of revenue and 95.6\% of orders -- almost all realized revenue already comes from customers who buy more than once.
 
-\section{Monthly Repurchase Analysis}
-\label{sec:6-8}
-
-The repurchase rate among eligible existing customers (customers whose first purchase was before the given month) averages 23.3\% across 24 months (Jan 2010 -- Dec 2011), ranging from 10.1\% (Dec 2011, a partial month) to 36.0\% (Mar 2010). The rate trends downward as the eligible pool grows from 951 to 5,824 customers over the window: 2011 months sit mostly in the 15--21\% range versus 25--36\% in 2010, consistent with the eligible pool accumulating lapsed customers who rarely repurchase and diluting the monthly rate.
-
 \section{Inter-Purchase Interval}
-\label{sec:6-9}
+\label{sec:6-8}
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch6_inter_purchase_interval.png}
@@ -165,10 +160,10 @@ The repurchase rate among eligible existing customers (customers whose first pur
 \end{tabular}
 \end{center}
 
-Gaps between a customer's consecutive purchase occasions are highly right-skewed (mean 52.1 days vs.\ median 25.0 days; min 0.0 days, max 714.2 days). Two candidate values for \textbf{$R_{\max}$} are carried forward: \textbf{P90 $=$ 136.0 days} (adopted as the default activity threshold for the rest of this chapter) and P95 $=$ 207.0 days (used as a sensitivity check in Section~\ref{sec:6-14}).
+Gaps between a customer's consecutive purchase occasions are highly right-skewed (mean 52.1 days vs.\ median 25.0 days; min 0.0 days, max 714.2 days). Two candidate values for \textbf{$R_{\max}$} are carried forward: \textbf{P90 $=$ 136.0 days} (adopted as the default activity threshold for the rest of this chapter) and P95 $=$ 207.0 days (used as a sensitivity check in Section~\ref{sec:6-13}).
 
 \section{Customer Monetary and Behavioral Analysis}
-\label{sec:6-10}
+\label{sec:6-9}
 
 \begin{center}
 \begin{tabular}{@{}p{3cm}p{3cm}p{3cm}p{3cm}@{}}
@@ -185,9 +180,9 @@ Gaps between a customer's consecutive purchase occasions are highly right-skewed
 Customer-level revenue, order frequency and average order value (AOV, revenue $\div$ frequency) are all heavily right-skewed (mean well above median in every column, $n = 5{,}852$). The top 1\% of customers by revenue (59 customers, revenue $\geq$ 28,631.08) are \textbf{wholesale-like}: only 1.0\% of customers but 32.1\% of total customer revenue -- consistent with the UK-retail-plus-wholesale mix already noted for this dataset in Section~\ref{sec:5-5}.
 
 \section{Customer Lifecycle}
-\label{sec:6-11}
+\label{sec:6-10}
 
-Stages are illustrative, based on recency as of the last observed date and $R_{\max}$ (P90, from Section~\ref{sec:6-9}) -- not a final definition.
+Stages are illustrative, based on recency as of the last observed date and $R_{\max}$ (P90, from Section~\ref{sec:6-8}) -- not a final definition.
 
 \begin{center}
 \includegraphics[width=0.75\textwidth]{figures/ch6_lifecycle_stage_bar.png}
@@ -217,7 +212,7 @@ Stages are illustrative, based on recency as of the last observed date and $R_{\
 Over the 79 weekly snapshots (Jun 2010 -- Dec 2011), the One-time share drifts down from $\approx$44\% to $\approx$28\% while Lapsed grows from near 0\% to $\approx$15--18\% by the end of the window -- expected within a fixed-length observation period, where cohorts age and genuinely new one-time buyers become rarer relative to the accumulated base.
 
 \section{RFM Exploration}
-\label{sec:6-12}
+\label{sec:6-11}
 
 \begin{center}
 \begin{tabular}{@{}p{3cm}p{3cm}p{3cm}p{3cm}@{}}
@@ -247,7 +242,7 @@ Grouping customers into frequency deciles and averaging recency and monetary val
 Customers who buy more often also buy more recently and spend far more per customer -- directly motivating RFM-style features for the churn model.
 
 \section{Churn Exploration}
-\label{sec:6-13}
+\label{sec:6-12}
 
 Using provisional labels ($H = 90$ days, $R_{\max} =$ P90 $= 136.0$ days): of 208,751 weekly active snapshot rows, 172,550 are labelable (their full prediction window is observed before the data end). The provisional overall churn rate is \textbf{48.0\%} -- with many one-time buyers, churn is close to the \emph{majority} class here, not a rare event, which changes how PR-AUC and Precision should be read (Section~\ref{sec:3-14}/Chapter~\ref{ch:evaluation}).
 
@@ -274,7 +269,7 @@ Churn rate falls sharply and monotonically with both monetary and frequency deci
 This strong univariate separation is an encouraging sign for predictive feasibility and reinforces the case for RFM-style features.
 
 \section{Snapshot Population and Design Feasibility}
-\label{sec:6-14}
+\label{sec:6-13}
 
 \textbf{1. Snapshot scheme comparison.}
 
@@ -332,13 +327,11 @@ The weekly Scoring Population -- the pool from which marketing selects Top-K eac
 All three candidates clear the $\geq 8$ test-week bar, but $H = 120$ leaves only 10 training weeks, too thin to be practical, while $H = 60$'s shorter horizon is less useful operationally. \textbf{$H = 90$ (24 training weeks) is the best-supported choice}, matching the illustrative timeline already used in Section~\ref{sec:7-9}.
 
 \section{Key Findings}
-\label{sec:6-15}
+\label{sec:6-14}
 
 \textbf{Revenue composition.} Repeat customers are 72.3\% of customers (4,234 of 5,852) but generate 96.7\% of revenue and 95.6\% of orders -- existing-customer retention is where almost all the revenue already is, which is the direct business case for this project.
 
 \textbf{Heterogeneity.} Customer revenue is extremely right-skewed (mean 2,916.71 vs.\ median 856.02 GBP). The top 1\% of customers by revenue (``wholesale-like'') are only 1.0\% of customers but 32.1\% of revenue -- consistent with Online Retail II's known mix of UK retail and wholesale buyers (Section~\ref{sec:5-5}).
-
-\textbf{Repeat purchasing.} The monthly repurchase rate among eligible existing customers averages 23.3\% (range 10.1\%--36.0\% across 24 months) -- noisier month to month than seasonal, unlike raw revenue, which clearly peaks in Nov 2010 and dips in Feb 2011.
 
 \textbf{Purchase intervals $\rightarrow R_{\max}$.} Gaps between consecutive purchases are highly skewed: median 25 days, mean 52 days, P90 $=$ 136 days, P95 $=$ 207 days. These set the $R_{\max}$ candidates used throughout this chapter (136 / 207 days).
 
