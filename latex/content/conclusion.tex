@@ -1,24 +1,93 @@
 \section{Summary of Strategy}
 \label{sec:12-1}
 
-The project connects e-commerce revenue generation with customer retention and churn prediction.
+The project connects e-commerce revenue generation with customer retention and churn prediction. Repeat customers are 72.3\% of the customer base but generate 96.7\% of revenue (Section~\ref{sec:6-8}), so keeping existing customers buying is where almost all revenue already is. The project therefore predicts, every week, which active customers are likely to make no purchase in the next 90 days, so that a retention campaign with limited capacity can be pointed at them first.
 
 \section{Business-to-Technical Translation}
 \label{sec:12-2}
 
-The business objective is to increase sales revenue through repeat-purchase revenue from existing customers while controlling retention and marketing cost. The technical solution is customer-level churn prediction and risk ranking.
+The business objective is to increase sales revenue through repeat-purchase revenue from existing customers while controlling retention and marketing cost. The technical solution is customer-level churn prediction and risk ranking:
 
-\section{Operational Strategy}
+\begin{itemize}
+    \item \textbf{Unit of analysis:} one row per Customer $\times$ weekly snapshot date, with features computed only from history up to that date (208,764 rows, Chapter~\ref{ch:data-preparation}).
+    \item \textbf{Label:} churn $=1$ if the customer makes no valid purchase in the next $H = 90$ days; only customers active in the last $R_{\max} = 136$ days are scored.
+    \item \textbf{Evaluation:} a chronological train / validation / test split with 90-day embargoes, so that no label used for training overlaps the period it is evaluated on (Section~\ref{sec:7-9}).
+    \item \textbf{Decision:} rank each week's active customers by predicted churn probability and contact the top $K\%$ that the campaign budget allows.
+\end{itemize}
+
+\section{Key Results}
 \label{sec:12-3}
 
-Weekly batch scoring of all active customers, customer snapshots, episode-based sampling for training, suppression of contacted customers, churn prediction, ranking and Top-K targeting.
+\textbf{Answers to the research questions} (Section~\ref{sec:1-4}):
 
-\section{Limitations}
+\begin{enumerate}
+    \item \textbf{From transactions to observations.} 1,067,371 raw transaction lines become 776,577 valid lines, 36,594 purchase occasions and a weekly table of 208,764 leakage-checked Customer $\times$ Snapshot rows with 11 point-in-time features. Two automatic checks guard the construction: no feature is sourced from after its snapshot date, and recent activity is consistent with recency and frequency on every row.
+    \item \textbf{How well behavior predicts churn.} On the unseen test period (July--September 2011, churn rate 40.1\%), the final model -- Logistic Regression on the full feature set -- reaches ROC-AUC 0.765 and PR-AUC 0.658. A tuned XGBoost is not meaningfully better (Section~\ref{sec:8-6}), which indicates that the signal in these features is close to additive and monotone.
+    \item \textbf{Prioritization under limited capacity.} Contacting the top 10\% of each week's ranking reaches churners 1.90 times as often as random contact (76\% of contacted customers are churners, versus 41\% at random), and beats both simple rules: an RFM score (Lift 1.80) and recency alone (Lift 1.57). The model leads in every one of the 10 test weeks.
+    \item \textbf{Behavior associated with churn.} Fewer purchases so far, lower cumulative spending and fewer purchases in the last 90 days go with a higher churn risk; a longer typical gap between purchases and being overdue relative to one's own rhythm go with a higher risk. These are associations, not causes (Section~\ref{sec:8-9}).
+\end{enumerate}
+
+\textbf{Comparison of targeting strategies} on the test period (weekly averages; net impact under the base scenario of Section~\ref{sec:9-9}: retention effectiveness 40\%, margin 35\%, contact cost \pounds0.50, incentive \pounds5):
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}lcccc@{}}
+    \toprule
+    Strategy & PR-AUC & Lift@10\% & Churners reached (10 weeks) & Net impact at 10\% (\pounds) \\
+    \midrule
+    Random & 0.404 & 1.02 & 986 & 41,626 \\
+    Recency rule & 0.531 & 1.57 & 1,521 & \textbf{70,214} \\
+    RFM rule & 0.624 & 1.80 & 1,743 & 64,345 \\
+    Machine-learning model & \textbf{0.658} & \textbf{1.90} & \textbf{1,846} & 42,388 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Against the success criteria} (Section~\ref{sec:2-7}):
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{3.1cm}p{9.2cm}p{1.9cm}@{}}
+    \toprule
+    Criterion & Result on the test period & Met? \\
+    \midrule
+    Predictive & PR-AUC 0.658, above the churn rate (0.401) and the recency rule (0.531). & Yes \\
+    Targeting & At $K = 20\%$ and $30\%$, weekly Lift 1.74 and 1.62 (recency rule 1.44 and 1.37); weekly Recall 0.35 and 0.49 (recency rule 0.29 and 0.41). & Yes \\
+    Stability & The model leads the baselines in all 10 test weeks; weekly Lift@10\% $1.90 \pm 0.06$. & Yes \\
+    Business scenario & Net impact is positive at every $K$, but below the recency rule up to $K = 40\%$; it is higher only at $K = 50\%$ (+\pounds30,142). & No (only at $K = 50\%$) \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{The central lesson} is that the best classifier is not automatically the best business decision. The model finds the most churners, but many of them are small, one-time buyers with low order values, whereas the recency rule happens to pick customers who spend more per order. Because the simulated value of retaining a customer is proportional to their order value, a better churn ranking does not translate into more preserved revenue at a small $K$ (Section~\ref{sec:9-9}).
+
+\section{Operational Strategy}
 \label{sec:12-4}
 
-The dataset lacks marketing treatment, cost, margin and control-group information, so causal uplift, incremental revenue and true ROI cannot be established. The $\sim$2-year span and seasonality limit the size and representativeness of the test period.
+Weekly batch scoring of all active customers, customer snapshots, episode-based sampling for training, suppression of contacted customers, churn prediction, ranking and Top-K targeting. Given the results above, the recommended use is:
 
-\section{Future Work}
+\begin{itemize}
+    \item Use the model's ranking to decide \emph{who is likely to churn}, and combine it with customer value when deciding \emph{who is worth an incentive}: for example, rank by expected loss (churn probability $\times$ average order value), or reserve costly incentives for high-value customers in the top risk bands and use a low-cost channel (automated e-mail) for low-value ones.
+    \item Choose $K$ from the campaign budget, not from the model; report Lift and Recall at that $K$ every week, alongside the recency rule as a running benchmark.
+    \item Suppress contacted customers for a few weeks and keep a random hold-out group that is not contacted, so that the real effect of the campaign can be measured later (Chapter~\ref{ch:feedback}).
+\end{itemize}
+
+\section{Limitations}
 \label{sec:12-5}
 
-Integrate campaign and financial data, run treatment/control experiments, apply uplift modeling and next-best-action optimization, and perform complete profitability analysis.
+\begin{itemize}
+    \item \textbf{No campaign data.} The dataset lacks marketing treatment, cost, margin and control-group information, so causal uplift, incremental revenue and true ROI cannot be established. All revenue and profit figures are scenario estimates under stated assumptions.
+    \item \textbf{Short history and seasonality.} The $\sim$2-year span gives only 10 test weeks (July--September 2011). The test period does not include the October--December peak, whose behavior differs most (churn rates of 60\% and more for December snapshots), and churn rates differ markedly between train (43.0\%), validation (52.9\%) and test (40.1\%).
+    \item \textbf{One-time buyers.} With only one purchase in their history, these customers are much harder to rank (ROC-AUC 0.657 vs.\ 0.759 for repeat customers; 56.0\% of the one-time customers left outside the top 10\% go on to churn, vs.\ 34.3\% for repeat customers, Section~\ref{sec:9-12}).
+    \item \textbf{Fixed design choices.} $R_{\max}$ and $H$ were chosen from the full dataset rather than from the training period alone (Section~\ref{sec:7-8}).
+\end{itemize}
+
+\section{Future Work}
+\label{sec:12-6}
+
+\begin{itemize}
+    \item Integrate campaign and financial data, run treatment/control experiments, and move from churn prediction to uplift modeling (who changes behavior \emph{because} of a contact).
+    \item Make the ranking value-aware (expected loss, or a model of future spend) and evaluate it with the same business-impact chain.
+    \item Add features aimed at one-time buyers (first-order basket, product category, country, time of year) or treat them with a separate model.
+    \item Extend the test period to cover a full year, including the year-end peak, and retrain on a rolling window.
+\end{itemize}
