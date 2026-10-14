@@ -19,18 +19,18 @@ ROC-AUC, PR-AUC, Precision, Recall and F1. Always report the test churn rate nex
     \toprule
     Test churn rate & ROC-AUC & PR-AUC & Precision@0.5 & Recall@0.5 & F1@0.5 \\
     \midrule
-    0.401 & 0.764 & 0.659 & 0.612 & 0.649 & 0.630 \\
+    0.401 & 0.765 & 0.658 & 0.613 & 0.614 & 0.614 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-ROC-AUC and PR-AUC match Section~\ref{sec:8-7}'s refit exactly, as expected from the identical recipe. PR-AUC (0.659) sits well above the test churn rate (0.401), its random reference.
+ROC-AUC and PR-AUC match Section~\ref{sec:8-7}'s refit exactly, as expected from the identical recipe. PR-AUC (0.658) sits well above the test churn rate (0.401), its random reference.
 
 \begin{center}
 \includegraphics[width=0.55\textwidth]{figures/ch9_calibration_curve.png}
 \end{center}
 
-The reliability curve tracks the diagonal reasonably closely (Brier score $= 0.193$), with the model somewhat overestimating risk around predicted probability $\approx 0.65$ (observed churn rate 0.57) and underestimating slightly at the low end -- acceptable for ranking-based targeting, but worth a calibration step (Platt/isotonic) if predicted probabilities are later used directly as values, e.g.\ in Section~\ref{sec:9-5}'s revenue-at-risk estimate.
+The reliability curve tracks the diagonal reasonably closely (Brier score $= 0.192$), with the model somewhat overestimating risk around predicted probability $\approx 0.65$ (observed churn rate 0.61) and in the highest bin ($\approx 0.91$ predicted vs.\ 0.80 observed), and overestimating slightly at the low end ($\approx 0.06$ vs.\ 0.03) -- acceptable for ranking-based targeting, but worth a calibration step (Platt/isotonic) if predicted probabilities are later used directly as values, e.g.\ in Section~\ref{sec:9-5}'s revenue-at-risk estimate.
 
 \section{Ranking Performance}
 \label{sec:9-3}
@@ -44,7 +44,7 @@ At $K=10\%$, computed per week over the 10 test weeks and compared against the r
     \toprule
     Candidate & Precision@10\% & Lift@10\% & Gain@10\% \\
     \midrule
-    Final model & $0.769 \pm 0.047$ & $1.924 \pm 0.049$ & $0.193 \pm 0.005$ \\
+    Final model & $0.760 \pm 0.050$ & $1.902 \pm 0.055$ & $0.190 \pm 0.006$ \\
     RFM rule & $0.718 \pm 0.047$ & $1.796 \pm 0.049$ & $0.180 \pm 0.005$ \\
     Recency rule & $0.626 \pm 0.056$ & $1.565 \pm 0.061$ & $0.157 \pm 0.006$ \\
     Random & $0.406 \pm 0.045$ & $1.017 \pm 0.110$ & $0.102 \pm 0.011$ \\
@@ -56,7 +56,7 @@ At $K=10\%$, computed per week over the 10 test weeks and compared against the r
 \includegraphics[width=0.85\textwidth]{figures/ch9_weekly_lift.png}
 \end{center}
 
-The final model leads every one of the 10 test weeks without exception, and its low week-to-week standard deviation (0.049 on Lift@10\%, versus 0.110 for random) shows the advantage is stable, not a lucky average. \textbf{RFM rule} here is a hand-built, untrained score (recency $-$ frequency $-$ monetary, each standardized on the training period) -- distinct from Section~\ref{sec:8-3}'s \emph{trained} Logistic Regression on the same three features -- and it is the closest competitor to the final model; the recency rule trails both.
+The final model leads every one of the 10 test weeks without exception, and its low week-to-week standard deviation (0.055 on Lift@10\%, versus 0.110 for random) shows the advantage is stable, not a lucky average. \textbf{RFM rule} here is a hand-built, untrained score (recency $-$ frequency $-$ monetary, each standardized on the training period) -- distinct from Section~\ref{sec:8-3}'s \emph{trained} Logistic Regression on the same three features -- and it is the closest competitor to the final model; the recency rule trails both.
 
 \section{Risk Band Analysis}
 \label{sec:9-4}
@@ -68,17 +68,17 @@ Compare actual churn rates and customer characteristics across risk bands (e.g.\
     \toprule
     Risk decile & Customers & Observed churn rate \\
     \midrule
-    1 (lowest) & 2,426 & 5.1\% \\
-    3 & 2,425 & 18.6\% \\
-    5 & 2,425 & 38.8\% \\
-    7 & 2,425 & 53.8\% \\
-    8 & 2,425 & 53.5\% \\
-    10 (highest) & 2,426 & 77.3\% \\
+    1 (lowest) & 2,426 & 4.9\% \\
+    3 & 2,425 & 20.0\% \\
+    5 & 2,425 & 38.4\% \\
+    6 & 2,425 & 51.0\% \\
+    7 & 2,425 & 50.3\% \\
+    10 (highest) & 2,426 & 75.8\% \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-Observed churn rate rises almost monotonically from 5.1\% to 77.3\% across deciles -- a 15$\times$ spread confirming the score is informative, not just well-ranked on average. The one exception is decile 8 (53.5\%), marginally below decile 7 (53.8\%); not material given weekly sample sizes.
+Observed churn rate rises almost monotonically from 4.9\% to 75.8\% across deciles -- a 15$\times$ spread confirming the score is informative, not just well-ranked on average. The one exception is decile 7 (50.3\%), marginally below decile 6 (51.0\%); not material given weekly sample sizes.
 
 \section{Customer Revenue at Risk}
 \label{sec:9-5}
@@ -120,7 +120,7 @@ At $K=10\%$, summed across the 10 test weeks (so $N_K$ counts weekly targeting i
     \toprule
     Candidate & $N_K$ & $TP_K$ & $FP_K$ & Revenue at risk \\
     \midrule
-    Final model & 2,427 & 1,867 & 560 & 337,903.72 \\
+    Final model & 2,427 & 1,846 & 581 & 341,960.97 \\
     RFM rule & 2,427 & 1,743 & 684 & 498,060.34 \\
     Recency rule & 2,427 & 1,521 & 906 & 538,397.09 \\
     Random & 2,427 & 986 & 1,441 & 330,372.57 \\
@@ -145,7 +145,7 @@ At $K=10\%$ (Section~\ref{sec:9-6}'s targeted churners), revenue preserved acros
     \toprule
     Candidate & $e=30\%$ & $e=40\%$ (Base) & $e=50\%$ \\
     \midrule
-    Final model & 101,371.12 & 135,161.49 & 168,951.86 \\
+    Final model & 102,588.29 & 136,784.39 & 170,980.49 \\
     RFM rule & 149,418.10 & 199,224.14 & 249,030.17 \\
     Recency rule & 161,519.13 & 215,358.84 & 269,198.55 \\
     Random & 99,111.77 & 132,149.03 & 165,186.28 \\
@@ -174,7 +174,7 @@ At $K=10\%$, $e=40\%$ (Base), contact cost is identical across candidates by con
     \toprule
     Candidate & Customers targeted & Churners captured & Contact cost \\
     \midrule
-    Final model & 2,427 & 1,867 & 1,213.50 \\
+    Final model & 2,427 & 1,846 & 1,213.50 \\
     RFM rule & 2,427 & 1,743 & 1,213.50 \\
     Recency rule & 2,427 & 1,521 & 1,213.50 \\
     Random & 2,427 & 986 & 1,213.50 \\
@@ -182,7 +182,7 @@ At $K=10\%$, $e=40\%$ (Base), contact cost is identical across candidates by con
 \end{tabular}
 \end{center}
 
-The reach-cost saving from targeting 10\% instead of everyone is the same 1,213.50 regardless of which candidate ranks customers -- confirming it comes from \emph{targeting}, not the model. The model's own contribution shows up only in churners captured (1,867 vs.\ 986 for random, almost double) -- whether that translates into more net business value depends on revenue at risk and incentive cost too (Section~\ref{sec:9-9}).
+The reach-cost saving from targeting 10\% instead of everyone is the same 1,213.50 regardless of which candidate ranks customers -- confirming it comes from \emph{targeting}, not the model. The model's own contribution shows up only in churners captured (1,846 vs.\ 986 for random, almost double) -- whether that translates into more net business value depends on revenue at risk and incentive cost too (Section~\ref{sec:9-9}).
 
 \section{Net Business Impact}
 \label{sec:9-9}
@@ -205,7 +205,7 @@ At $K=10\%$, $e=40\%$ (Base), $m=35\%$, $c_{\text{contact}}=\pounds0.50$, $c_{\t
     \toprule
     Candidate & $TP_K$ & $FP_K$ & Revenue preserved & Gross profit preserved & Contact cost & Incentive cost & Net impact \\
     \midrule
-    Final model & 1,867 & 560 & 135,161.49 & 47,306.52 & 1,213.50 & 4,294.00 & \textbf{41,799.02} \\
+    Final model & 1,846 & 581 & 136,784.39 & 47,874.54 & 1,213.50 & 4,273.00 & \textbf{42,388.04} \\
     RFM rule & 1,743 & 684 & 199,224.14 & 69,728.45 & 1,213.50 & 4,170.00 & 64,344.95 \\
     Recency rule & 1,521 & 906 & 215,358.84 & 75,375.59 & 1,213.50 & 3,948.00 & \textbf{70,214.09} \\
     Random & 986 & 1,441 & 132,149.03 & 46,252.16 & 1,213.50 & 3,413.00 & 41,625.66 \\
@@ -229,16 +229,16 @@ For the final model, with $m$, $c_{\text{contact}}$, $c_{\text{inc}}$ and $r$ he
     \toprule
     Target \% & Customers & Churners captured & Recall\newline @K & Revenue at risk & Preserved (30/40/50\%) & Costs & Net impact & Net impact vs recency rule \\
     \midrule
-    10\% & 2,427 & 1,867 & 0.19 & 337,903.72 & 101,371 / 135,161 / 168,952 & 5,507.50 & 41,799.02 & $-$28,415.07 \\
-    20\% & 4,850 & 3,377 & 0.35 & 794,130.67 & 238,239 / 317,652 / 397,065 & 10,652.00 & 100,526.29 & $-$32,792.34 \\
-    30\% & 7,274 & 4,697 & 0.48 & 1,356,293.83 & 406,888 / 542,518 / 678,147 & 15,608.00 & 174,273.14 & $-$18,504.64 \\
-    40\% & 9,700 & 5,993 & 0.62 & 1,878,460.72 & 563,538 / 751,384 / 939,230 & 20,543.00 & 242,441.50 & $-$5.62 \\
-    50\% & 12,126 & 7,148 & 0.74 & 2,412,837.41 & 723,851 / 965,135 / 1,206,419 & 25,337.00 & 312,460.24 & $+$26,781.55 \\
+    10\% & 2,427 & 1,846 & 0.19 & 341,960.97 & 102,588 / 136,784 / 170,980 & 5,486.50 & 42,388.04 & $-$27,826.06 \\
+    20\% & 4,850 & 3,375 & 0.35 & 790,415.70 & 237,125 / 316,166 / 395,208 & 10,650.00 & 100,008.20 & $-$33,310.44 \\
+    30\% & 7,274 & 4,719 & 0.49 & 1,285,838.62 & 385,752 / 514,335 / 642,919 & 15,630.00 & 164,387.41 & $-$28,390.37 \\
+    40\% & 9,700 & 5,932 & 0.61 & 1,760,829.74 & 528,249 / 704,332 / 880,415 & 20,482.00 & 226,034.16 & $-$16,412.95 \\
+    50\% & 12,126 & 7,184 & 0.74 & 2,437,101.24 & 731,130 / 974,840 / 1,218,551 & 25,373.00 & 315,821.17 & $+$30,142.49 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-Widening $K$ increases both Recall@K and net impact monotonically for the final model, but the comparison to the recency rule only turns positive between $K=30\%$ and $K=40\%$ (crossing almost exactly at $K=40\%$, where the gap is $-\pounds5.62$, essentially a wash), and becomes clearly favorable only at $K=50\%$ ($+\pounds26,781.55$). At the narrow targeting shares most realistic for a retention campaign ($K=10$--$30\%$), the model trails the simple recency rule on net business impact, reinforcing Section~\ref{sec:9-9}'s caveat.
+Widening $K$ increases both Recall@K and net impact monotonically for the final model, but the comparison to the recency rule stays negative up to $K=40\%$ ($-\pounds16,412.95$) and turns clearly favorable only at $K=50\%$ ($+\pounds30,142.49$), so the crossing point lies between 40\% and 50\%. At the narrow targeting shares most realistic for a retention campaign ($K=10$--$30\%$), the model trails the simple recency rule on net business impact, reinforcing Section~\ref{sec:9-9}'s caveat.
 
 \section{Model Comparison}
 \label{sec:9-11}
@@ -250,7 +250,7 @@ Compare candidates (including baselines) on predictive metrics, ranking metrics,
     \toprule
     Candidate & ROC-AUC & PR-AUC & Weekly Lift@10\% & Net impact ($K$=10\%, $e$=40\%) \\
     \midrule
-    Final model & 0.764 & 0.659 & $1.924 \pm 0.049$ & 41,799.02 \\
+    Final model & 0.765 & 0.658 & $1.902 \pm 0.055$ & 42,388.04 \\
     RFM rule & 0.736 & 0.624 & $1.796 \pm 0.049$ & 64,344.95 \\
     Recency rule & 0.638 & 0.531 & $1.565 \pm 0.061$ & 70,214.09 \\
     Random & 0.506 & 0.404 & $1.017 \pm 0.110$ & 41,625.66 \\
@@ -258,32 +258,32 @@ Compare candidates (including baselines) on predictive metrics, ranking metrics,
 \end{tabular}
 \end{center}
 
-No candidate wins on every column. The final model is unambiguously best on predictive and ranking metrics (ROC-AUC, PR-AUC, Lift@10\% and its stability) -- against the Success Criteria of Section~\ref{sec:2-7}, it clears the ``PR-AUC/Lift beat the baselines'' bar comfortably. But the rule-based baselines preserve more net business value at the default $K=10\%$ operating point (Section~\ref{sec:9-9}), so the ``business-scenario'' success criterion is not met at that $K$ -- only from $K\approx40\%$ upward (Section~\ref{sec:9-10}). This gap between predictive quality and business outcome, not any single metric, is the main input to the deployment recommendation (Chapter~\ref{ch:deployment}).
+No candidate wins on every column. The final model is unambiguously best on predictive and ranking metrics (ROC-AUC, PR-AUC, Lift@10\% and its stability) -- against the Success Criteria of Section~\ref{sec:2-7}, it clears the ``PR-AUC/Lift beat the baselines'' bar comfortably. But the rule-based baselines preserve more net business value at the default $K=10\%$ operating point (Section~\ref{sec:9-9}), so the ``business-scenario'' success criterion is not met at that $K$ -- only at $K=50\%$ among the shares tested (Section~\ref{sec:9-10}). This gap between predictive quality and business outcome, not any single metric, is the main input to the deployment recommendation (Chapter~\ref{ch:deployment}).
 
 \section{Error Analysis and Limitations}
 \label{sec:9-12}
 
 Investigate false positives, false negatives, segments (one-time vs repeat, UK vs non-UK, wholesale-sized customers) and weeks where performance differs, including seasonal effects. State clearly that Online Retail II contains no campaign treatment/control information, so incremental revenue, causal retention effect and true campaign ROI cannot be identified. Business-impact results are scenario estimates.
 
-Targeting the top 10\% by the final model's score, pooled across the test period: 57.7\% true negatives, 32.3\% false negatives, 7.7\% true positives, 2.3\% false positives -- the false-negative share is large by construction, since a 10\%-wide net cannot catch most of a $\approx$40\% base rate.
+Targeting the top 10\% by the final model's score, pooled across the test period: 57.5\% true negatives, 32.5\% false negatives, 7.6\% true positives, 2.4\% false positives -- the false-negative share is large by construction, since a 10\%-wide net cannot catch most of a $\approx$40\% base rate.
 
 \begin{center}
 \begin{tabular}{@{}p{3.6cm}p{2.6cm}p{2.6cm}@{}}
     \toprule
     Group & FP rate (among targeted) & FN rate (among non-targeted) \\
     \midrule
-    One-time & 20.6\% & 55.5\% \\
-    Repeat & 25.3\% & 34.1\% \\
+    One-time & 23.3\% & 56.0\% \\
+    Repeat & 25.6\% & 34.3\% \\
     \midrule
-    UK & 22.3\% & 36.3\% \\
-    Non-UK & 29.4\% & 32.5\% \\
+    UK & 24.0\% & 36.5\% \\
+    Non-UK & 29.1\% & 32.6\% \\
     \midrule
-    Retail & 22.7\% & 37.2\% \\
+    Retail & 24.2\% & 37.4\% \\
     Wholesale-like & n/a (0 targeted) & 7.8\% \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-Three patterns stand out. \textbf{One-time customers} are missed far more often than repeat customers (55.5\% vs.\ 34.1\% FN rate) -- with only one purchase occasion, their feature history is thin, and the model has less signal to work with (consistent with Section~\ref{sec:6-11}'s One-time lifecycle stage). \textbf{Non-UK customers} see a higher false-positive rate (29.4\% vs.\ 22.3\% for UK) -- the model, trained overwhelmingly on UK behavior (Section~\ref{sec:6-3}), generalizes a little less cleanly to the small non-UK population. \textbf{Wholesale-like customers} (Section~\ref{sec:6-11}) are the model's strongest case: a 7.8\% false-negative rate, far below retail's 37.2\%, and none were false positives in the targeted top 10\% -- their high, frequent purchase volume makes their churn signal unusually clear.
+Three patterns stand out. \textbf{One-time customers} are missed far more often than repeat customers (56.0\% vs.\ 34.3\% FN rate) -- with only one purchase occasion, their feature history is thin, and the model has less signal to work with (consistent with Section~\ref{sec:6-11}'s One-time lifecycle stage). \textbf{Non-UK customers} see a higher false-positive rate (29.1\% vs.\ 24.0\% for UK) -- the model, trained overwhelmingly on UK behavior (Section~\ref{sec:6-3}), generalizes a little less cleanly to the small non-UK population. \textbf{Wholesale-like customers} (Section~\ref{sec:6-11}) are the model's strongest case: a 7.8\% false-negative rate, far below retail's 37.4\%, and none were false positives in the targeted top 10\% -- their high, frequent purchase volume makes their churn signal unusually clear.
 
 \textbf{Principle.} \textbf{Project-wide business-impact principle.} The model identifies and prioritizes churn risk; the retention campaign determines treatment; actual incremental revenue requires treatment/control data. Revenue at risk, revenue preserved, cost saving and net impact are simulation outputs unless supported by observed campaign outcomes.

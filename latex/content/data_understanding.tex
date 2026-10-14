@@ -209,7 +209,9 @@ Stages are illustrative, based on recency as of the last observed date and $R_{\
 \end{tabular}
 \end{center}
 
-\textbf{Active repeat} customers are less than half the base (47.6\%) but hold 83.4\% of all customer revenue -- the core value segment. \textbf{At-risk} customers (recency between $R_{\max}$ and $2 \times R_{\max}$, i.e.\ 136--272 days since last purchase) are a smaller group (9.3\% of customers, 5.3\% of revenue) and represent the main churn-prevention opportunity.
+\textbf{Active repeat} customers are less than half the base (47.6\%) but hold 83.4\% of all customer revenue -- the core value segment. \textbf{At-risk} customers (recency between $R_{\max}$ and $2 \times R_{\max}$, i.e.\ 136--272 days since last purchase) are a smaller group (9.3\% of customers, 5.3\% of revenue).
+
+\textbf{How the stages relate to the churn model.} The model only scores customers whose recency is at most $R_{\max}$ (the Scoring Population, Section~\ref{sec:3-7}): the \textbf{Active repeat} stage plus the one-time buyers who purchased within the last 136 days. These are the customers a retention campaign can still act on \emph{before} they lapse, which is the purpose of churn prediction. \textbf{At-risk} and \textbf{Lapsed} customers have already passed $R_{\max}$; they are outside the model's scope and belong to a separate re-activation (win-back) effort rather than to churn prevention.
 
 \textbf{Lifecycle stage trend over time (extra).} Reclassifying every (customer, week) row into the same four stages using recency and frequency \emph{as of that week} tracks how the customer-base composition evolves, instead of a single end-of-data snapshot:
 
@@ -241,13 +243,39 @@ Grouping customers into frequency deciles and averaging recency and monetary val
     Frequency decile & Mean recency (days) & Mean monetary (GBP) \\
     \midrule
     1 (lowest) & 335.1 & 409.8 \\
+    2 & 358.4 & 308.0 \\
+    3 & 330.0 & 461.7 \\
+    4 & 243.2 & 935.6 \\
     5 & 212.2 & 1,070.2 \\
+    6 & 167.6 & 1,241.6 \\
+    7 & 142.8 & 1,674.6 \\
+    8 & 108.5 & 2,474.0 \\
+    9 & 64.4 & 3,901.5 \\
     10 (highest) & 35.1 & 16,670.9 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-Customers who buy more often also buy more recently and spend far more per customer -- directly motivating RFM-style features for the churn model.
+Customers who buy more often also buy more recently and spend far more per customer -- directly motivating RFM-style features for the churn model. Deciles 1--3 all contain one-time buyers (27.6\% of customers have exactly one purchase), so the deciles are split by an arbitrary tie-break there and their small differences carry no meaning.
+
+\textbf{RFM measured at the snapshot date vs.\ churn.} The table above uses each customer's \emph{whole-history} values. For predicting churn, recency, frequency and monetary value must instead be measured \emph{as of each snapshot date}, exactly as the model will see them (Section~\ref{sec:7-6}). Using the provisional churn labels of Section~\ref{sec:6-14} (172,550 labelable weekly snapshots, churn 48.0\%):
+
+\begin{center}
+\small
+\begin{tabular}{@{}lr@{\hspace{1cm}}lr@{\hspace{1cm}}lr@{}}
+    \toprule
+    Recency quintile & Churn & Frequency so far & Churn & Monetary quintile & Churn \\
+    \midrule
+    1 ($\leq$ 13.8 days) & 32.6\% & 1 purchase & 71.3\% & 1 (lowest) & 72.8\% \\
+    2 (13.8--32.7) & 39.3\% & 2 & 62.9\% & 2 & 61.4\% \\
+    3 (32.7--56.8) & 47.4\% & 3--4 & 52.2\% & 3 & 51.1\% \\
+    4 (56.8--90.6) & 56.3\% & 5--9 & 34.0\% & 4 & 36.3\% \\
+    5 (90.6--136) & 64.4\% & 10 or more & 13.3\% & 5 (highest) & 18.3\% \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+All three dimensions separate churn monotonically, with frequency and monetary value the strongest (churn rate about 5$\times$ and 4$\times$ higher in the lowest group than in the highest) and recency the weakest (2$\times$). This matches the final model, where frequency and monetary value carry the largest weights (Section~\ref{sec:8-9}). Within the Scoring Population, recency is bounded at 136 days, which limits how much it can separate.
 
 \section{Churn Exploration}
 \label{sec:6-14}
@@ -274,7 +302,7 @@ Churn rate falls sharply and monotonically with both monetary and frequency deci
 \end{tabular}
 \end{center}
 
-This strong univariate separation is an encouraging sign for predictive feasibility and reinforces the case for RFM-style features.
+This strong univariate separation is an encouraging sign for predictive feasibility and reinforces the case for RFM-style features. It is, however, an \emph{upper bound}: these deciles rank customers by their whole-history revenue and frequency, which include purchases made after each snapshot date (a customer who never buys again stays in the lowest frequency decile precisely because they churned, hence the 100\% churn rate). Measured at the snapshot date, as the model sees them, the same features still separate churn clearly but less sharply -- for example 71.3\% churn for customers with one purchase so far vs.\ 13.3\% for ten or more (Section~\ref{sec:6-13}).
 
 \section{Snapshot Population and Design Feasibility}
 \label{sec:6-15}

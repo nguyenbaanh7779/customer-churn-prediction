@@ -82,7 +82,7 @@ Generate historical features using information available up to the snapshot date
     Tenure (days) & 277.9 & 248.8 & 733.9 \\
     Mean inter-purchase gap so far (days) & 76.9 & 56.0 & 714.2 \\
     Recency / typical gap & 300.0 & 0.63 & 195,604 \\
-    Activity in last 90 days (occasions) & 4.17 & 1 & 361 \\
+    Activity in last 90 days (occasions) & 1.67 & 1 & 86 \\
     Distinct products so far & 86.2 & 53 & 2,515 \\
     Cancellations so far & 1.49 & 0 & 112 \\
     Cancellation value share so far & 0.022 & 0.000 & 0.896 \\
@@ -92,6 +92,8 @@ Generate historical features using information available up to the snapshot date
 
 \textbf{Note.} \textbf{A known instability.} \texttt{recency / typical gap} is undefined for the 43,970 rows where the customer has only one occasion so far (no prior gap exists) and is set to \texttt{NaN}. A further 31 rows had a \texttt{mean\_gap\_so\_far} of exactly zero (customers with multiple invoices at the same instant), which would otherwise divide to \texttt{inf} and break downstream modeling in Chapter~\ref{ch:modeling} -- these are also set to \texttt{NaN} rather than \texttt{inf}. Even after this fix the ratio's long tail is extreme (max 195,604, against a median of 0.63) because it divides by a very small but non-zero typical gap; a stricter pipeline would additionally winsorize this feature before modeling.
 
+\textbf{Note.} \textbf{Corrected: activity in the last 90 days.} \texttt{activity\_last\_90d} is computed as $\text{frequency}(t) - \text{frequency}(t - 90\text{ days})$, the second term coming from an as-of lookup at the window start. An earlier version of the pipeline attached that lookup back to the base table by row position. Because the lookup re-sorts rows by date and many customers share each snapshot date, the values were shuffled between customers within the same week: 39.7\% of the rows with a purchase in the last 90 days showed an activity of 0, and 17,708 rows without one showed a positive count. The lookup is now joined back on (\texttt{customer\_id}, \texttt{snapshot\_date}), which changes this column on 165,496 rows (79.3\%) and leaves every other column identical. A new check asserts the property that must hold by definition: $\text{activity} \geq 1$ exactly when $\text{recency} \leq 90$ days, and $\text{activity} \leq \text{frequency}$. All modeling and evaluation results in Chapters~\ref{ch:modeling}--\ref{ch:evaluation} use the corrected feature.
+
 \section{Churn Label Construction}
 \label{sec:7-7}
 
@@ -100,7 +102,7 @@ Use only the prediction window $(t,\, t+H]$ to determine churn, applying the sam
 \section{Leakage Prevention}
 \label{sec:7-8}
 
-No future information may be used in feature construction. The prediction window is reserved for label construction. Aggregates that depend on the whole dataset (scalers, encoders, imputation values, percentile thresholds) are fitted on the training period only, once modeling starts in Chapter~\ref{ch:modeling}. A direct check re-derives one feature (\texttt{frequency\_so\_far}) for every base row and asserts its source timestamp never exceeds the row's snapshot date; this passes for all 208,764 rows, confirming the as-of-merge construction is leakage-safe by result, not only by design.
+No future information may be used in feature construction. The prediction window is reserved for label construction. Aggregates that depend on the whole dataset (scalers, encoders, imputation values, percentile thresholds) are fitted on the training period only, once modeling starts in Chapter~\ref{ch:modeling}. A direct check re-derives one feature (\texttt{frequency\_so\_far}) for every base row and asserts its source timestamp never exceeds the row's snapshot date; this passes for all 208,764 rows, confirming the as-of-merge construction is leakage-safe by result, not only by design. A second check verifies that \texttt{activity\_last\_90d} is consistent with \texttt{recency\_days} and \texttt{frequency\_so\_far} on every row (Section~\ref{sec:7-6}).
 
 \textbf{Caveat.} $R_{\max}$ and $H$ themselves were chosen from inter-purchase gaps measured over the \emph{full} dataset in Chapter~\ref{ch:data-understanding}, not the training period alone. A stricter pipeline would re-derive these thresholds from training-period data only; here they are treated as fixed configuration, consistent with their role as project-level design choices rather than learned parameters.
 
@@ -149,7 +151,7 @@ Validation and test therefore measure performance exactly as the model would be 
 \includegraphics[width=0.85\textwidth]{figures/ch7_split_timeline.png}
 \end{center}
 
-24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 34 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Section~\ref{sec:6-14} shifts the base rate between periods, not just between individual weeks:
+24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 42 weeks split into train/validation/test (24 + 8 + 10) as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Section~\ref{sec:6-14} shifts the base rate between periods, not just between individual weeks:
 
 \begin{center}
 \begin{tabular}{@{}p{2.6cm}p{2.3cm}p{2.6cm}p{2.3cm}@{}}
