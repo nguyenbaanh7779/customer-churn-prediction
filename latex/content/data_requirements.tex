@@ -1,12 +1,39 @@
-The primary data source is the \textbf{Olist Brazilian E-commerce Dataset}. The following tables are used to build customer purchase history and behavioral features:
+\section{Data Requirement Overview}
+\label{sec:4-1}
 
-\begin{itemize}
-    \item \textbf{Customers} -- customer identifiers and location information.
-    \item \textbf{Orders} -- order-level records, including order status and timestamps.
-    \item \textbf{Order Items} -- line-item detail for each order, including product, price, and freight cost.
-    \item \textbf{Products} -- product category and attributes.
-    \item \textbf{Payments} -- payment type, installments, and value.
-    \item \textbf{Reviews} -- customer review scores associated with orders.
-\end{itemize}
+Requirements derive from the business and analytical objectives: identify customers, purchases, products, revenue, customer history, temporal behavior and future outcomes.
 
-These tables are joined to construct an analytical view of customer behavior over time, at the transaction, order, customer, and product levels.
+\section{Customer Information}
+\label{sec:4-2}
+
+Customer ID and Country. Customer ID is required to build customer histories and snapshots.
+
+\section{Transaction Information}
+\label{sec:4-3}
+
+Invoice, InvoiceDate, Customer ID, StockCode, Description, Quantity and Price. Use the actual field names of the selected dataset (Online Retail II uses \texttt{Invoice}, \texttt{Price} and \texttt{Customer ID}).
+
+\section{Revenue Information}
+\label{sec:4-4}
+
+Transaction revenue is derived as Quantity $\times$ Price and can be aggregated by customer, purchase occasion and month.
+
+\section{Product Information}
+\label{sec:4-5}
+
+StockCode and Description support product-level and customer-product analysis. Product cost, category hierarchy and margin are not available.
+
+\section{Temporal Information}
+\label{sec:4-6}
+
+InvoiceDate is required for observation windows, prediction windows, monthly metrics, inter-purchase intervals, lifecycle analysis and temporal splits.
+
+\section{Marketing and Cost Information}
+\label{sec:4-7}
+
+A production system would ideally collect CampaignID, CustomerID, CampaignDate, CampaignType, Channel, Treatment, Discount, VoucherCost, MarketingCost and campaign outcomes. None of these are in the current dataset; the related quantities in Chapter~\ref{ch:evaluation} are assumptions.
+
+\section{Analytical Dataset Design}
+\label{sec:4-8}
+
+Each final modeling row represents \textbf{Customer $\times$ Snapshot Date}, with historical features and a future churn label.
