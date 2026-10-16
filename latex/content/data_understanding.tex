@@ -1,6 +1,7 @@
 \section{Objective}
-\label{sec:6-1}
+\label{sec:4-1}
 
+<<<<<<< HEAD
 Determine what the transaction data reveal about sales, customers, revenue composition, repeat purchasing, behavior, and the feasibility of churn prediction.
 
 \textbf{Note.} \textbf{Iterative link with Chapter~\ref{ch:data-preparation}.} Sections~\ref{sec:6-14}--\ref{sec:6-15} need churn labels and snapshots, which are formally built in Chapter~\ref{ch:data-preparation}. This chapter uses \textbf{provisional} labels and snapshots computed for candidate values of $H$, $R_{\max}$ and $C$. Final values are fixed in Chapter~\ref{ch:data-preparation}, following the iterative nature of the Data Science methodology.
@@ -58,6 +59,12 @@ Three value conventions recur throughout this report and are worth stating once,
 
 \section{Dataset Overview}
 \label{sec:6-3}
+=======
+Data Understanding and Data Preparation (Chapter~\ref{ch:data-preparation}) form one narrative: understand the data, extract insights about transactions and customers, and turn them into the strategy for building the modeling dataset -- its population, label and features. This chapter covers the first half: an overview of the data (Section~\ref{sec:4-2}), sales and seasonality (Section~\ref{sec:4-3}), why existing customers matter (Section~\ref{sec:4-4}), how often customers come back (Section~\ref{sec:4-5}) and how revenue is spread across purchase cadences (Section~\ref{sec:4-6}). It ends with the design decisions (Section~\ref{sec:4-7}) that Chapter~\ref{ch:data-preparation} implements.
+
+\section{Dataset Overview}
+\label{sec:4-2}
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 The raw dataset (before any cleaning) contains:
 
@@ -80,6 +87,7 @@ The raw dataset (before any cleaning) contains:
 
 The dataset is overwhelmingly UK-based: the \textbf{United Kingdom} accounts for 981,330 rows (91.9\%); the next largest markets are EIRE (17,866), Germany (17,624), France (14,330) and the Netherlands (5,140), each far behind the UK.
 
+<<<<<<< HEAD
 \section{Data Quality}
 \label{sec:6-4}
 
@@ -105,18 +113,30 @@ Applying the full valid-purchase definition (Section~\ref{sec:7-2}) keeps 776,57
 
 \section{Monthly Sales Performance}
 \label{sec:6-5}
+=======
+After applying the valid-purchase definition (Sections~\ref{sec:5-1}--\ref{sec:5-2}), \textbf{776,577 rows (72.8\%) remain, representing 36,594 purchase occasions (invoices) of 5,852 customers} between 1 December 2009 and 9 December 2011. The rest of this chapter works on this valid-transaction subset; the per-rule data-quality breakdown is reported with the cleaning rules in Section~\ref{sec:5-1}.
+
+\section{Monthly Sales and Seasonality}
+\label{sec:4-3}
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch6_monthly_revenue_customers.png}
 \end{center}
 
-Monthly revenue ranges from 442,293.59 (Feb 2011, the lowest full month) to 1,155,978.39 (Nov 2010, the highest); monthly active customers follow the same shape, peaking at 1,660 (Nov 2011). Both series show clear \textbf{seasonality}: a steady climb from mid-year, a peak in Oct--Nov (pre-Christmas ordering), and a sharp fall through Dec--Feb. The first month (Dec 2009) and the last month (Dec 2011, only 9 days of data) are partial calendar periods and should be read as such rather than as genuine dips.
+A typical full month has about \textbf{1,040 purchasing customers} (median 965) and \textbf{revenue of about GBP 690K} (median GBP 595K), ranging from GBP 442K (Feb 2011) to GBP 1.16M (Nov 2010). Both series are clearly \textbf{seasonal}: a steady climb from late summer to a peak in \textbf{October--November} (Nov 2010: GBP 1.16M; Nov 2011: GBP 1.14M; Oct 2010 and Oct 2011: GBP 1.0M each), driven by pre-Christmas ordering, followed by a sharp fall in December (Dec 2010: GBP 565K, 884 customers) through February. The first month (Dec 2009) and the last month (Dec 2011, only 9 days of data) are partial periods.
 
+<<<<<<< HEAD
 \section{New vs Existing Customers}
 \label{sec:6-6}
+=======
+Two consequences carry into Chapter~\ref{ch:data-preparation}. Only about 1,040 of the 5,852 customers buy in a given month, so most customers purchase infrequently and churn must be judged over a window much longer than a month. And because behavior shifts with the season, the data must be split chronologically and results read per scoring week.
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
-Each customer's purchase occasions are ordered in time; the first occasion is \textbf{new}, every later one is \textbf{existing}. Over the full valid-transaction history (no warm-up applied here), every one of the 5,852 customers contributes exactly one new occasion (5,852 total) against 30,742 existing occasions -- repeat buying dominates occasion counts by more than 5 to 1.
+\section{Existing Customers Drive Revenue}
+\label{sec:4-4}
 
+<<<<<<< HEAD
 Monthly existing-customer counts grow steadily, from 281 (Dec 2009) to 1,501 (Nov 2011); monthly new-customer counts shrink from 951 in the first month (when every buyer is ``new'' by definition) to double digits by late 2011 (28 in Dec 2011). This is expected within a fixed two-year window: acquisition slows relative to the accumulated installed base.
 
 \section{Revenue from New and Existing Customers}
@@ -132,6 +152,9 @@ The existing-customer share of monthly revenue rises quickly from 41.4\% (Dec 20
 
 \section{Repeat Customer Analysis}
 \label{sec:6-8}
+=======
+Each customer's purchase occasions are ordered in time; the first occasion is \textbf{new}, every later one is \textbf{existing}. At the customer level, over the whole period:
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \begin{center}
 \begin{tabular}{@{}p{3cm}p{2.3cm}p{2.3cm}p{2.6cm}p{2.3cm}@{}}
@@ -144,15 +167,30 @@ The existing-customer share of monthly revenue rises quickly from 41.4\% (Dec 20
 \end{tabular}
 \end{center}
 
-Repeat customers are less than three-quarters of the customer base but generate 96.7\% of revenue and 95.6\% of orders -- almost all realized revenue already comes from customers who buy more than once.
+\textbf{Repeat customers} -- those with two or more purchase occasions -- are 72.3\% of the customer base but generate \textbf{95.6\% of orders and 96.7\% of revenue}. Almost all realized revenue already comes from customers who buy more than once, which is the direct business case (Chapter~\ref{ch:problem-approach}) for a retention strategy aimed at existing customers.
 
+<<<<<<< HEAD
 \section{Monthly Repurchase Analysis}
 \label{sec:6-9}
+=======
+The same picture holds month by month. Each customer active in a month is counted once, as new in their first purchase month and existing in any later month:
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
-The repurchase rate among eligible existing customers (customers whose first purchase was before the given month) averages 23.3\% across 24 months (Jan 2010 -- Dec 2011), ranging from 10.1\% (Dec 2011, a partial month) to 36.0\% (Mar 2010). The rate trends downward as the eligible pool grows from 951 to 5,824 customers over the window: 2011 months sit mostly in the 15--21\% range versus 25--36\% in 2010, consistent with the eligible pool accumulating lapsed customers who rarely repurchase and diluting the monthly rate.
+\begin{center}
+\includegraphics[width=0.85\textwidth]{figures/ch6_new_existing_share.png}
+\end{center}
 
+<<<<<<< HEAD
 \section{Inter-Purchase Interval}
 \label{sec:6-10}
+=======
+After the first months of data (Dec 2009 is 100\% new by construction), existing customers make up 80\% or more of monthly active customers from mid-2010 and 81.6--95.4\% throughout 2011, and their share of monthly revenue is higher still, in the 88--96\% range from late 2010 onward. Existing customers therefore dominate both who buys and how much is spent.
+
+\section{Repurchase Interval and the 90-Day Horizon}
+\label{sec:4-5}
+
+Retail is a \textbf{non-contractual} setting: customers never cancel, so churn has to be inferred from a period without purchases. The gap between consecutive purchase occasions of the same customer tells how long that period should be. Note that the shares below are per \textbf{repurchase} (one gap per repeat occasion, 30,742 in total), not per customer: frequent buyers contribute more gaps, and one-time customers contribute none.
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch6_inter_purchase_interval.png}
@@ -168,70 +206,101 @@ The repurchase rate among eligible existing customers (customers whose first pur
 \end{tabular}
 \end{center}
 
+<<<<<<< HEAD
 Gaps between a customer's consecutive purchase occasions are highly right-skewed (mean 52.1 days vs.\ median 25.0 days; min 0.0 days, max 714.2 days). Two candidate values for \textbf{$R_{\max}$} are carried forward: \textbf{P90 $=$ 136.0 days} (adopted as the default activity threshold for the rest of this chapter) and P95 $=$ 207.0 days (used as a sensitivity check in Section~\ref{sec:6-15}).
 
 \section{Customer Monetary and Behavioral Analysis}
 \label{sec:6-11}
+=======
+Gaps are highly right-skewed (mean 52.1 days vs.\ median 25.0 days). \textbf{54.8\% of repurchases happen within 30 days} of the previous purchase -- the largest single group, but not yet representative of repurchasing as a whole. Extending the window to \textbf{90 days covers 82.8\% of repurchases}; beyond 150 days each 30-day bin holds under 2.5\% of gaps, and the open-ended 240+ bin collects the remaining 3.7\%.
+
+\textbf{Choosing the horizon $H$.} The prediction horizon trades off three criteria:
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \begin{center}
-\begin{tabular}{@{}p{3cm}p{3cm}p{3cm}p{3cm}@{}}
+\begin{tabular}{@{}p{1.6cm}p{5cm}p{4.6cm}@{}}
     \toprule
-    Statistic & Revenue (GBP) & Frequency & AOV (GBP) \\
+    $H$ (days) & Repurchases within $H$ & Training weeks after the embargoed split \\
     \midrule
-    Mean & 2,916.71 & 6.25 & 384.40 \\
-    Median & 856.02 & 3.00 & 277.87 \\
-    Max & 580,987.04 & 373.00 & 84,236.25 \\
+    60 & 74.2\% & 37 \\
+    \textbf{90} & \textbf{82.8\%} & \textbf{24} \\
+    120 & 88.1\% & 10 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-Customer-level revenue, order frequency and average order value (AOV, revenue $\div$ frequency) are all heavily right-skewed (mean well above median in every column, $n = 5{,}852$). The top 1\% of customers by revenue (59 customers, revenue $\geq$ 28,631.08) are \textbf{wholesale-like}: only 1.0\% of customers but 32.1\% of total customer revenue -- consistent with the UK-retail-plus-wholesale mix already noted for this dataset in Section~\ref{sec:5-5}.
+A shorter horizon labels as churned many customers who would in fact come back (noisier labels); a longer one detects churn later -- at odds with the goal of early identification (Section~\ref{sec:1-2}) -- and, on a two-year window, leaves far fewer labelable weeks for training once two $H$-day embargoes are subtracted (computed in Section~\ref{sec:5-9}). \textbf{$H = 90$ days} covers most repurchases while keeping 24 training weeks; moving to 120 days would add only 5 points of coverage at the cost of more than half the training weeks.
 
+<<<<<<< HEAD
 \section{Customer Lifecycle}
 \label{sec:6-12}
 
 Stages are illustrative, based on recency as of the last observed date and $R_{\max}$ (P90, from Section~\ref{sec:6-10}) -- not a final definition.
+=======
+The same distribution sets the \textbf{activity threshold} $R_{\max} = $ P90 $=$ 136 days: a customer whose last purchase is older than this is treated as already lapsed and is not scored. $H$ answers \emph{how long without a purchase counts as churn}; $R_{\max}$ answers \emph{who is still worth predicting for}.
+
+\section{Customer Groups by Purchase Cadence}
+\label{sec:4-6}
+
+Customers are grouped by purchase cadence -- an illustrative grouping, not a final definition. \textbf{One-time} customers have only their first purchase (no gap yet); every other customer is grouped by their \textbf{average inter-purchase gap}, the mean of their own gaps from Section~\ref{sec:4-5}: 0--30, 30--90 or 90+ days. The average uses each customer's full history, which is fine for description; model features in Chapter~\ref{ch:data-preparation} only use history up to the snapshot date. For each group, AOV is the group's revenue divided by its purchase occasions.
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \begin{center}
-\includegraphics[width=0.75\textwidth]{figures/ch6_lifecycle_stage_bar.png}
-\end{center}
-
-\begin{center}
-\begin{tabular}{@{}p{3.2cm}p{2.3cm}p{2.8cm}p{2.3cm}p{2.3cm}@{}}
+\begin{tabular}{@{}p{3.2cm}p{2.3cm}p{2.6cm}p{2.3cm}p{2.3cm}@{}}
     \toprule
-    Stage & Customers & Revenue (GBP) & Customer share & Revenue share \\
+    Group & Customers & Customer share & AOV (GBP) & Revenue share \\
     \midrule
-    One-time & 1,618 & 555,999.97 & 27.65\% & 3.26\% \\
-    Active repeat & 2,787 & 14,230,318.20 & 47.62\% & 83.37\% \\
-    At-risk & 542 & 907,995.16 & 9.26\% & 5.32\% \\
-    Lapsed & 905 & 1,374,254.64 & 15.46\% & 8.05\% \\
+    One-time & 1,618 & 27.65\% & 343.63 & 3.26\% \\
+    0--30 days & 755 & 12.90\% & 598.50 & 48.70\% \\
+    30--90 days & 1,775 & 30.33\% & 385.56 & 33.45\% \\
+    90+ days & 1,704 & 29.12\% & 396.65 & 14.59\% \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-\textbf{Active repeat} customers are less than half the base (47.6\%) but hold 83.4\% of all customer revenue -- the core value segment. \textbf{At-risk} customers (recency between $R_{\max}$ and $2 \times R_{\max}$, i.e.\ 136--272 days since last purchase) are a smaller group (9.3\% of customers, 5.3\% of revenue) and represent the main churn-prevention opportunity.
+Customers whose usual rhythm is under 90 days generate \textbf{82.2\% of revenue} (48.7\% + 33.5\%). Frequent buyers (under 30 days) are only 12.9\% of customers but 48.7\% of revenue, combining the most purchase occasions with the largest baskets (AOV 598.50 vs.\ 466.43 overall). The 90+ day group still buys, only slowly, and holds 14.6\% of revenue; one-time customers are over a quarter of the base yet only 3.3\% of revenue. The implication for the label: when a customer who normally returns within 90 days goes 90 days without a purchase, that is a departure from their usual rhythm -- exactly the signal a 90-day churn label captures, and it concerns the customers who carry most of the revenue.
 
-\textbf{Lifecycle stage trend over time (extra).} Reclassifying every (customer, week) row into the same four stages using recency and frequency \emph{as of that week} tracks how the customer-base composition evolves, instead of a single end-of-data snapshot:
+\textbf{Per repurchase vs.\ per customer.} The 82.8\% of Section~\ref{sec:4-5} is a share of repurchases, dominated by frequent buyers. Per customer, only \textbf{59.8\% of repeat customers} have an average gap under 90 days (17.8\% under 30 days, 41.9\% at 30--90 days) and 40.2\% buy more slowly; adding the one-time customers, who have no repurchase at all, explains why the churn rate at $H = 90$ is close to one half (Section~\ref{sec:5-7}) even though most repurchases happen within 90 days.
+
+\begin{center}
+\includegraphics[width=0.85\textwidth]{figures/ch6_lifecycle_aov_heatmap.png}
+\end{center}
+
+Crossing the cadence groups with customer AOV shows that purchase cadence and basket size are largely independent: every repeat group peaks in the 300--500 GBP band (225, 578 and 511 customers), while one-time customers peak lower, at 100--200 GBP (496 customers). Large baskets (1,000+ GBP) are rare and spread evenly across all four groups (43--68 customers each) -- so frequency/recency and monetary behavior carry different information and both belong in the feature set.
+
+\textbf{Cadence mix over time.} Regrouping every (customer, week) row into the same four groups, using the purchase history \emph{as of that week} (average gap so far $=$ (last purchase $-$ first purchase) $\div$ (purchases $- 1$)), tracks how the customer-base mix evolves:
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch6_lifecycle_stage_trend.png}
 \end{center}
 
-Over the 79 weekly snapshots (Jun 2010 -- Dec 2011), the One-time share drifts down from $\approx$44\% to $\approx$28\% while Lapsed grows from near 0\% to $\approx$15--18\% by the end of the window -- expected within a fixed-length observation period, where cohorts age and genuinely new one-time buyers become rarer relative to the accumulated base.
+Over the 79 weekly snapshots (Jun 2010 -- Dec 2011), the 90+ day share grows from 6.5\% to 29.0\% while the One-time share falls from 44.5\% to 28.0\%. Part of this is mechanical: in a fixed two-year window, long gaps only become observable as customers age, so the trend should not be read as a pure change in behavior. It does, however, show that a growing part of the customer base drifts into slow repurchasing.
 
+<<<<<<< HEAD
 \section{RFM Exploration}
 \label{sec:6-13}
+=======
+\section{Key Findings and Design Decisions}
+\label{sec:4-7}
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \begin{center}
-\begin{tabular}{@{}p{3cm}p{3cm}p{3cm}p{3cm}@{}}
+\begin{tabular}{@{}p{7.2cm}p{7cm}@{}}
     \toprule
-    Statistic & Recency (days) & Frequency & Monetary (GBP) \\
+    Finding & Design decision (Chapter~\ref{ch:data-preparation}) \\
     \midrule
-    Mean & 199.72 & 6.25 & 2,916.71 \\
-    Median & 94.90 & 3.00 & 856.02 \\
+    776,577 valid rows (72.8\%) = 36,594 invoices of 5,852 customers, Dec 2009 -- Dec 2011 & Customer histories built from valid purchase occasions only (Sections~\ref{sec:5-1}--\ref{sec:5-3}) \\
+    About 1,040 customers and GBP 690K revenue per month; peak in Oct--Nov, sharp drop in Dec & Chronological split with embargo; results read per scoring week (Section~\ref{sec:5-9}) \\
+    Only about 1,040 of 5,852 customers buy in a given month & Weekly snapshots of all active customers, judged over a multi-month window (Sections~\ref{sec:5-4}--\ref{sec:5-5}) \\
+    Repeat customers: 72.3\% of customers, 95.6\% of orders, 96.7\% of revenue & Population focused on existing customers (Section~\ref{sec:5-4}) \\
+    54.8\% of repurchases within 30 days, 82.8\% within 90 days; P90 gap $=$ 136 days & Label horizon $H = 90$ days (Section~\ref{sec:5-7}); activity threshold $R_{\max} = 136$ days (Section~\ref{sec:5-4}) \\
+    Customers with an average gap under 90 days hold 82.2\% of revenue & A 90-day churn label flags departures from the usual rhythm of the most valuable customers \\
+    One-time customers: 27.6\% of customers, 3.3\% of revenue & Kept in the population but reported as a separate segment \\
+    Purchase cadence and AOV are largely independent & Features cover both frequency/recency and monetary behavior (Section~\ref{sec:5-6}) \\
     \bottomrule
 \end{tabular}
 \end{center}
+<<<<<<< HEAD
 
 Grouping customers into frequency deciles and averaging recency and monetary value within each decile shows a clear monotonic relationship:
 
@@ -350,3 +419,5 @@ All three candidates clear the $\geq 8$ test-week bar, but $H = 120$ leaves only
 \textbf{Snapshot design feasibility.} Weekly-all active population is stable (mean $\approx$2,642 customers/week, range 2,172--3,218 over 79 weeks). The episode-cooldown rule ($C=90$) cuts training rows from 208,751 (weekly-all) to 20,151 -- a $>$90\% reduction, as intended. A daily grid would carry 1,477,637 rows ($\approx$7.1$\times$ weekly-all), confirming the cost of daily snapshots. For the embargoed split (8 validation / 10 test weeks, matching Section~\ref{sec:7-9}'s illustration): train weeks fall sharply as $H$ grows -- 37 ($H=60$), 24 ($H=90$), only 10 ($H=120$) -- because the $\approx$2-year span leaves little slack once two $H$-day embargoes are subtracted. All three candidates clear the $\geq 8$ test-week bar, but $H = 120$'s 10 training weeks is too thin to be practical; \textbf{$H = 90$ (24 train weeks) is the best-supported choice}, matching the illustrative timeline already used in Section~\ref{sec:7-9}.
 
 \textbf{Data limitations.} 22.8\% of raw rows have no Customer ID (the single largest data-quality issue, ahead of duplicates at 3.2\%, invalid quantity/price at 2.4\%, cancellations at 1.8\%, and non-product codes at 0.6\%) and are necessarily excluded from any customer-level analysis. Combined, the valid-transaction rules keep 72.8\% of raw rows for analysis -- consistent with Section~\ref{sec:7-2}'s definition, applied here provisionally.
+=======
+>>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
