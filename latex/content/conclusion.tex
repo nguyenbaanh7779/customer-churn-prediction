@@ -1,24 +1,24 @@
 \section{Summary of Strategy}
-\label{sec:12-1}
+\label{sec:10-1}
 
 The project connects e-commerce revenue generation with customer retention and churn prediction.
 
 \section{Business-to-Technical Translation}
-\label{sec:12-2}
+\label{sec:10-2}
 
 The business objective is to increase sales revenue through repeat-purchase revenue from existing customers while controlling retention and marketing cost. The technical solution is customer-level churn prediction and risk ranking.
 
 \section{Operational Strategy}
-\label{sec:12-3}
+\label{sec:10-3}
 
 Weekly batch scoring of all active customers, customer snapshots, episode-based sampling for training, suppression of contacted customers, churn prediction, ranking and Top-K targeting.
 
 \section{Limitations}
-\label{sec:12-4}
+\label{sec:10-4}
 
 The dataset lacks marketing treatment, cost, margin and control-group information, so causal uplift, incremental revenue and true ROI cannot be established. The $\sim$2-year span and seasonality limit the size and representativeness of the test period.
 
 \section{Future Work}
-\label{sec:12-5}
+\label{sec:10-5}
 
 Integrate campaign and financial data, run treatment/control experiments, apply uplift modeling and next-best-action optimization, and perform complete profitability analysis.
