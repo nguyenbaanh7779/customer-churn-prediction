@@ -1,36 +1,36 @@
 \textbf{Note.} Like Chapter~\ref{ch:deployment}, this chapter is a \textbf{proposed design}.
 
 \section{Feedback Loop}
-\label{sec:11-1}
+\label{sec:9-1}
 
 After $H$ days, observe customer purchases and compare predicted churn with actual churn.
 
 \section{Model Performance Monitoring}
-\label{sec:11-2}
+\label{sec:9-2}
 
 Track classification and weekly Top-K ranking metrics over time.
 
 \section{Business Outcome Monitoring}
-\label{sec:11-3}
+\label{sec:9-3}
 
 Track repurchase rate, revenue contribution, target population and campaign cost when available.
 
 \section{Data Drift}
-\label{sec:11-4}
+\label{sec:9-4}
 
 Monitor transaction volume, feature distributions and customer behavior.
 
 \section{Concept Drift}
-\label{sec:11-5}
+\label{sec:9-5}
 
 Monitor changes in the relationship between behavior and future churn, including seasonal shifts.
 
 \section{Campaign Feedback}
-\label{sec:11-6}
+\label{sec:9-6}
 
 If treatment/control data become available, evaluate campaign response and incremental outcomes; this would also allow the assumed $e$, $r$ and costs to be replaced by measured values.
 
 \section{Model Retraining}
-\label{sec:11-7}
+\label{sec:9-7}
 
 Retrain periodically or when performance, drift or behavior changes justify it, using the same embargoed temporal design and the same Training Population rule.

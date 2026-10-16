@@ -1,35 +1,37 @@
 \section{Project Background}
 \label{sec:1-1}
 
-The project focuses on customer retention in an e-commerce business. Revenue is generated through customer purchases, while customer acquisition and retention both require business resources. The project investigates how Data Science can support the retention of existing customers by predicting churn.
+Retail businesses rely on customer relationships and repeat purchases to maintain sustainable revenue. However, customers may gradually reduce their purchasing activity or stop purchasing altogether.
 
-\section{Business Context}
-\label{sec:1-2}
+Identifying these customers before they become inactive can be challenging, particularly when businesses have large customer bases and substantial transaction histories. Without an effective way to identify potential churn, businesses may miss opportunities to maintain customer relationships and encourage repeat purchases.
 
-The business generates sales revenue from new customers making first purchases and from existing customers making repeat purchases. Existing customers may stop purchasing, which creates a customer churn problem.
+Customer churn prediction can help businesses better understand customer purchasing behavior and identify customers who may be at risk of becoming inactive.
 
 \section{Problem Statement}
-\label{sec:1-3}
+\label{sec:1-2}
 
-The business needs to increase sales revenue while operating under limited retention and marketing resources. The project therefore focuses on identifying existing customers at risk of churn so that retention resources can be prioritized.
+\begin{itemize}
+    \item \textbf{Difficulty in early identification of churn risk.} Retail businesses struggle to detect customers who are likely to stop purchasing based on historical transaction behavior. Traditional methods often identify inactive customers only after a long period of inactivity, by which time retention opportunities are already limited.
+    \item \textbf{Limited retention resources impacting revenue growth.} The business needs to increase sales revenue but operates under constrained marketing and retention resources. Without a data-driven way to prioritize at-risk customers, retention efforts may be inefficient and fail to maximize revenue.
+\end{itemize}
 
 \section{Research Questions}
-\label{sec:1-4}
+\label{sec:1-3}
 
 \begin{enumerate}
-    \item How can transaction history be transformed into customer-level observations for churn prediction?
-    \item How effectively can purchasing behavior predict future churn?
-    \item Can churn-risk ranking support prioritization under limited retention capacity, compared with simple rule-based targeting?
-    \item Which behavioral characteristics are \emph{associated} with churn? (Associational, not causal.)
+    \item How can transaction history be converted into customer-level data for churn prediction?
+    \item How well does purchasing behavior predict churn?
+    \item Does churn-risk ranking improve prioritization under limited retention resources compared to rule-based targeting?
+    \item Which customer behaviors are most associated with churn? (Correlation, not causation.)
 \end{enumerate}
 
 \section{Project Objectives}
-\label{sec:1-5}
+\label{sec:1-4}
 
-Design and evaluate a customer churn prediction system that supports the retention of existing customers by producing customer-level churn risk and supporting customer prioritization.
+To develop a data-driven churn prediction model that identifies customers at risk of leaving based on their purchasing history, enabling retail e-commerce businesses to prioritize limited retention resources and maximize sales revenue.
 
 \section{Scope and Limitations}
-\label{sec:1-6}
+\label{sec:1-5}
 
 \textbf{In scope:} existing-customer retention, churn prediction, customer snapshots, weekly batch scoring, risk ranking and Top-K targeting.
 
@@ -41,6 +43,19 @@ Design and evaluate a customer churn prediction system that supports the retenti
 \end{itemize}
 
 \section{Report Structure}
-\label{sec:1-7}
+\label{sec:1-6}
 
-The report follows the 12 chapters defined in this strategy.
+The report is organized into ten chapters:
+
+\begin{enumerate}
+    \item \textbf{Introduction} -- background, problem statement, research questions, objectives and scope.
+    \item \textbf{Problem Statement and Approach} (Chapter~\ref{ch:problem-approach}) -- the business problem, objectives and success criteria, and the analytical approach used to address them.
+    \item \textbf{Dataset and Data Specification} (Chapter~\ref{ch:dataset}) -- the Online Retail II dataset, its characteristics and limitations, and its schema and conventions.
+    \item \textbf{Data Understanding} (Chapter~\ref{ch:data-understanding}) -- exploratory analysis of sales, customers and purchasing behavior, and the feasibility of churn prediction.
+    \item \textbf{Data Preparation} (Chapter~\ref{ch:data-preparation}) -- cleaning, customer snapshots, features, churn labels and the temporal split.
+    \item \textbf{Modeling} (Chapter~\ref{ch:modeling}) -- baselines, feature sets, algorithms, tuning and interpretability.
+    \item \textbf{Evaluation} (Chapter~\ref{ch:evaluation}) -- predictive, ranking and business-impact evaluation on the unseen test period.
+    \item \textbf{Deployment} (Chapter~\ref{ch:deployment}) -- the proposed weekly scoring design.
+    \item \textbf{Feedback} (Chapter~\ref{ch:feedback}) -- monitoring and retraining.
+    \item \textbf{Conclusion} (Chapter~\ref{ch:conclusion}) -- summary, limitations and future work.
+\end{enumerate}
