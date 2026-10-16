@@ -240,3 +240,5 @@ latex/**/*.vrb
 latex/**/*.pdf
 
 /data
+
+/models
