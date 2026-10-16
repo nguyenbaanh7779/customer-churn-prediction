@@ -1,9 +1,6 @@
 \section{Data Cleaning}
 \label{sec:5-1}
 
-<<<<<<< HEAD
-Clean transaction records using documented, reproducible rules. Every rule reports how many rows and how much revenue it removes. Applying the full valid-purchase definition below to the raw dataset keeps \textbf{776,577 of 1,067,371 rows (72.8\%)} -- the per-rule breakdown (missing Customer ID 22.8\%, duplicates 3.2\%, invalid quantity/price 2.4\%, cancellations 1.8\%, non-product codes 0.6\%) was already measured in Section~\ref{sec:6-4} and is not repeated here; this chapter reuses the same \texttt{is\_valid} filter to build everything that follows.
-=======
 Clean transaction records using documented, reproducible rules. Each data-quality issue is first measured on the full raw dataset (rows may overlap across rules):
 
 \begin{center}
@@ -21,7 +18,6 @@ Clean transaction records using documented, reproducible rules. Each data-qualit
 \end{center}
 
 \textbf{Missing Customer ID} is by far the largest issue: these rows cannot be attached to any customer history and are necessarily excluded. Non-product stock codes are discovered empirically (codes that do not start with a digit, unlike normal product codes) rather than assumed in advance. Combining all rules into the valid-purchase definition below keeps \textbf{776,577 of 1,067,371 rows (72.8\%)} and 5,852 of the original 5,942 customers -- the remaining 90 customers' entire history consists of invalid rows. This single \texttt{is\_valid} filter is used to build everything that follows.
->>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \section{Valid Transaction Definition}
 \label{sec:5-2}
@@ -33,11 +29,7 @@ A \textbf{valid purchase} row must satisfy all of the following:
     \toprule
     Rule & Treatment \\
     \midrule
-<<<<<<< HEAD
-    Customer ID present & Rows without Customer ID are excluded from customer history (still counted in the Section~\ref{sec:6-3} overview). \\
-=======
     Customer ID present & Rows without Customer ID are excluded from customer history (still counted in the Section~\ref{sec:4-2} overview). \\
->>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
     Not a cancellation & Invoices starting with "C" are excluded from purchases; kept separately for cancellation features. \\
     Quantity $>$ 0 and Price $>$ 0 & Otherwise excluded. \\
     Product stock code & Non-product codes (e.g.\ postage, manual adjustments, bank charges, marketplace fees) are excluded; the final list is documented. \\
@@ -66,9 +58,6 @@ Eligibility is built in two steps.
     \item $t$ lies within the snapshot period (after warm-up; $t + H \leq$ data end for labeled rows).
 \end{enumerate}
 
-<<<<<<< HEAD
-With $R_{\max} = 136.0$ days (the rounded P90 value from Section~\ref{sec:6-10}, used as the frozen configuration constant for this chapter) and a 6-month warm-up, this produces \textbf{208,764 weekly active-customer base rows}. This is 13 rows above the 208,751 reported in Section~\ref{sec:6-15}, entirely explained by rounding: the exploratory analysis there compared recency against the unrounded quantile (135.97 days), while this chapter uses the rounded $R_{\max} = 136.0$ days as the frozen pipeline configuration -- a handful of rows sit exactly at that boundary.
-=======
 With $R_{\max} = 136.0$ days (the P90 inter-purchase gap from Section~\ref{sec:4-5}, rounded and frozen as the pipeline configuration) and a 6-month warm-up, this produces \textbf{208,764 weekly active-customer base rows}.
 
 \textbf{Sensitivity to $R_{\max}$.} The threshold decides who is labeled and scored. Loosening it from P90 to P95 admits more marginal customers and pushes the churn rate up by nearly 5 points, so the choice materially changes the label distribution:
@@ -83,7 +72,6 @@ With $R_{\max} = 136.0$ days (the P90 inter-purchase gap from Section~\ref{sec:4
     \bottomrule
 \end{tabular}
 \end{center}
->>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \textbf{Step 2 -- Population flags on the base table.}
 
@@ -166,9 +154,6 @@ Generate historical features using information available up to the snapshot date
 \section{Churn Label Construction}
 \label{sec:5-7}
 
-<<<<<<< HEAD
-Use only the prediction window $(t,\, t+H]$ to determine churn, applying the same valid-purchase definition as Section~\ref{sec:7-2}. At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable} (their full prediction window is observed before the data end); the final, non-provisional churn rate on those rows is \textbf{48.0\%} -- matching the provisional estimate from Section~\ref{sec:6-14} exactly.
-=======
 Use only the prediction window $(t,\, t+H]$ to determine churn, applying the same valid-purchase definition as Section~\ref{sec:5-2}. At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable} (their full prediction window is observed before the data end); the churn rate on those rows is \textbf{48.0\%}. Churn is therefore close to a majority class here, not a rare event, which changes how PR-AUC and Precision should be read (Chapter~\ref{ch:evaluation}). It is close to one half even though 82.8\% of repurchases happen within 90 days, because that share is dominated by frequent buyers: per customer, 40\% of repeat customers buy more slowly than every 90 days and one-time customers have no repurchase at all (Section~\ref{sec:4-6}).
 
 \textbf{Label EDA.} The episode-sampled training rows have a churn rate of 49.5\%, close to the 48.0\% of the full Scoring Population -- the subsampling does not materially bias the label distribution.
@@ -194,7 +179,6 @@ Churn also falls with point-in-time purchase behavior (features from Section~\re
 \end{center}
 
 The top deciles churn far less than the bottom ones -- a clear univariate signal for frequency and monetary features. The frequency curve is not monotonic in its lower deciles because many rows tie at one or two purchases so far. These point-in-time gaps are narrower than an end-of-data view would suggest, since that view would let customers' future purchases inflate their frequency and monetary values.
->>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \section{Leakage Prevention}
 \label{sec:5-8}
@@ -248,11 +232,7 @@ Validation and test therefore measure performance exactly as the model would be 
 \includegraphics[width=0.85\textwidth]{figures/ch7_split_timeline.png}
 \end{center}
 
-<<<<<<< HEAD
-24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 34 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Section~\ref{sec:6-14} shifts the base rate between periods, not just between individual weeks:
-=======
 24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 34 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Sections~\ref{sec:4-3} and~\ref{sec:5-7} shifts the base rate between periods, not just between individual weeks:
->>>>>>> 058c5219aa3dada1b3d09560b752a3e68791762b
 
 \begin{center}
 \begin{tabular}{@{}p{2.6cm}p{2.3cm}p{2.6cm}p{2.3cm}@{}}
