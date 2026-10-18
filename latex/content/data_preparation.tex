@@ -102,21 +102,20 @@ Applying the episode-cooldown rule ($C = 90$ days) to the 208,764 active rows se
 
 Construct \textbf{one weekly active-customer base table} of Customer $\times$ Snapshot Date rows, then compute features and labels once for this table. The Training Population and the Scoring Population are filters on it (via the flags above), which guarantees that both use identical feature and label definitions. A direct check confirms every \texttt{in\_training\_sample} row is also an \texttt{in\_scoring\_population} row (the episode rule only subsets the active base, never adds to it) -- the base table has shape $(208{,}764,\ 8)$ at this point, before feature engineering.
 
-\textbf{Snapshot scheme comparison.}
+\textbf{Training vs Scoring Population size.}
 
 \begin{center}
-\begin{tabular}{@{}p{4.6cm}p{3cm}p{3cm}p{3cm}@{}}
+\begin{tabular}{@{}p{6.4cm}p{2.4cm}p{2.4cm}p{2.8cm}@{}}
     \toprule
-    Scheme & Rows & Customers & Rows per customer \\
+    Population & Rows & Customers & Rows per customer \\
     \midrule
-    Daily, all active & 1,477,685 & 5,753 & 256.9 \\
-    Weekly, all active & 208,764 & 5,725 & 36.5 \\
-    Weekly, episode cooldown ($C = 90$) & 20,152 & 5,725 & 3.5 \\
+    Weekly, all active (Scoring Population) & 208,764 & 5,725 & 36.5 \\
+    Weekly, episode cooldown ($C = 90$) (Training Population) & 20,152 & 5,725 & 3.5 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-A daily grid carries 7.1$\times$ the rows of weekly snapshots, almost all of them near-duplicates, which is why snapshots are weekly. The episode-cooldown rule then cuts the weekly rows by more than 90\% for training while keeping every customer.
+The episode-cooldown rule cuts the weekly rows by more than 90\% for training (from 36.5 to 3.5 rows per customer) while keeping every customer; validation, test and scoring keep every active row.
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch7_weekly_scoring_population.png}

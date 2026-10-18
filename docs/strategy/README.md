@@ -247,7 +247,7 @@ Check the sensitivity of population size and churn rate to R~max~ (e.g. P90 vers
 
 Construct **one weekly active-customer base table** of Customer × Snapshot Date rows, then compute features and labels once for this table. The Training Population and the Scoring Population are filters on it (via the flags above), which guarantees that both use identical feature and label definitions.
 
-Compare daily, weekly-all and weekly episode-based snapshots (rows, rows per customer) to justify weekly snapshots and the training-only episode rule, and report the **weekly Scoring Population size** over time — the pool from which marketing selects Top-K each week.
+Compare weekly all-active and weekly episode-based snapshots (rows, rows per customer) to justify the training-only episode rule, and report the **weekly Scoring Population size** over time — the pool from which marketing selects Top-K each week.
 
 ## 5.6 Feature Engineering
 
