@@ -7,7 +7,7 @@ All evaluation uses the \textbf{Scoring Population}: every active customer at ev
 
 The same customer appears in several consecutive test weeks, so test rows are not independent. This mirrors real operations and is acceptable, but uncertainty is reported across weeks (mean $\pm$ standard deviation) or with a customer-level bootstrap rather than as if rows were independent.
 
-\textbf{Execution.} The final model (Logistic Regression, Full feature set, $C=0.01$) is refit from scratch here using the exact recipe of Section~\ref{sec:6-7} -- trained on the Training Population re-derived over train+validation (12,019 rows) -- rather than loaded from a saved file, so this chapter is self-contained. The test period spans 10 weekly scoring dates (2011-07-04 -- 2011-09-05, Section~\ref{sec:5-9}) and 24,252 Scoring Population rows. Repeat customers make up 86.7\% of test rows and one-time customers 13.3\%; segment-level error rates are reported in Section~\ref{sec:7-12}.
+\textbf{Execution.} The final model (Logistic Regression, Full feature set, $C=0.01$) is refit from scratch here using the exact recipe of Section~\ref{sec:6-7} -- trained on the Training Population re-derived over train+validation (12,019 rows) -- rather than loaded from a saved file, so this chapter is self-contained. The test period spans 10 weekly scoring dates (2011-07-04 -- 2011-09-05, Section~\ref{sec:5-6}) and 24,252 Scoring Population rows. Repeat customers make up 86.7\% of test rows and one-time customers 13.3\%; segment-level error rates are reported in Section~\ref{sec:7-12}.
 
 \section{Classification Performance}
 \label{sec:7-2}
@@ -94,7 +94,7 @@ or, with enough history:
 \end{equation*}
 All inputs use history up to the snapshot date only. These are estimates of revenue exposure, not observed lost revenue.
 
-\textbf{Applied here.} The first (proxy) form is used, with \texttt{avg\_order\_value\_so\_far} (Section~\ref{sec:5-6}) standing in for $\text{AvgPurchaseValue}_i$ -- there is not enough post-snapshot history in this $\approx$2-year dataset to estimate a stable $\text{AvgMonthlyRevenue}_i$ for the second form.
+\textbf{Applied here.} The first (proxy) form is used, with \texttt{avg\_order\_value\_so\_far} (Section~\ref{sec:5-5}) standing in for $\text{AvgPurchaseValue}_i$ -- there is not enough post-snapshot history in this $\approx$2-year dataset to estimate a stable $\text{AvgMonthlyRevenue}_i$ for the second form.
 
 \begin{center}
 \begin{tabular}{@{}p{2.3cm}p{2.3cm}p{2.3cm}p{2.3cm}p{2.3cm}@{}}

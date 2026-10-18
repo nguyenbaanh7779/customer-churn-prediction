@@ -132,7 +132,7 @@ The project uses the publicly available **Online Retail II** dataset as a histor
 
 ## 3.2 Dataset Characteristics and Limitations
 
-The dataset covers the period from December 2009 to December 2011. Its relatively limited historical coverage constrains the number of customer snapshots and future observation periods available for churn labeling (see 5.9). In addition, the retailer serves both individual customers and wholesalers, resulting in substantial differences in purchasing frequency and transaction value. Seasonal demand, particularly around Christmas, may also influence purchasing patterns and should be considered when designing temporal validation and evaluating model performance.
+The dataset covers the period from December 2009 to December 2011. Its relatively limited historical coverage constrains the number of customer snapshots and future observation periods available for churn labeling (see 5.6). In addition, the retailer serves both individual customers and wholesalers, resulting in substantial differences in purchasing frequency and transaction value. Seasonal demand, particularly around Christmas, may also influence purchasing patterns and should be considered when designing temporal validation and evaluating model performance.
 
 ## 3.3 Raw Data Schema
 
@@ -146,7 +146,7 @@ The raw dataset is a single flat transaction table (not pre-split into separate 
 | `Quantity` | integer | Units on this line. Negative for cancellations. |
 | `InvoiceDate` | datetime | Timestamp of the transaction line. |
 | `Price` | float | Unit price (GBP). |
-| `Customer ID` | float | Customer identifier. Missing for a meaningful share of rows (5.1) — these cannot be attached to any customer history. |
+| `Customer ID` | float | Customer identifier. Missing for a meaningful share of rows (5.2) — these cannot be attached to any customer history. |
 | `Country` | string | Customer's country, self-reported at checkout. |
 
 ## 3.4 Pipeline Column Names
@@ -155,8 +155,8 @@ The raw columns are renamed to snake_case names used throughout the pipeline: `i
 
 ## 3.5 Value Conventions
 
-- **Cancellation invoices.** An `invoice_id` starting with "C" marks a cancellation of a previous purchase, with negative `quantity`. These rows are excluded from purchase history (5.2) but kept separately to build the cancellation features (5.6).
-- **Non-product stock codes.** A small number of `product_id` values are operational/accounting entries rather than products — postage (`POST`, `DOT`), manual adjustments (`M`), carriage (`C2`), discounts (`D`), samples (`S`), bank charges and similar. They are discovered empirically (5.1) and excluded from product- and customer-level analysis.
+- **Cancellation invoices.** An `invoice_id` starting with "C" marks a cancellation of a previous purchase, with negative `quantity`. These rows are excluded from purchase history (5.2) but kept separately to build the cancellation features (5.5).
+- **Non-product stock codes.** A small number of `product_id` values are operational/accounting entries rather than products — postage (`POST`, `DOT`), manual adjustments (`M`), carriage (`C2`), discounts (`D`), samples (`S`), bank charges and similar. They are discovered empirically (5.2) and excluded from product- and customer-level analysis.
 - **Missing Customer ID.** Rows without a `customer_id` cannot be attached to any customer history and are excluded from every customer-level analysis from 4.3 onward, although they are still counted in the raw totals of 4.2.
 
 ## 3.6 Information Not Available
@@ -175,7 +175,7 @@ Data Understanding and Data Preparation (Chapter 5) form one narrative: understa
 
 ## 4.2 Dataset Overview
 
-Transaction count, unique customers, unique products, date range, countries, total quantity and revenue of the raw data; then the size of the valid-transaction subset (rows kept, invoices, customers). The per-rule data-quality breakdown belongs to 5.1.
+Transaction count, unique customers, unique products, date range, countries, total quantity and revenue of the raw data; then the size of the valid-transaction subset (rows kept, invoices, customers). The per-rule data-quality breakdown belongs to 5.2.
 
 ## 4.3 Monthly Sales and Seasonality
 
@@ -187,7 +187,7 @@ One-time versus repeat customers (counts, orders, revenue shares) as the headlin
 
 ## 4.5 Repurchase Interval and the 90-Day Horizon
 
-Retail is non-contractual, so churn is inferred from a period without purchases. Time between consecutive purchase occasions (per repurchase, not per customer): mean, median, percentiles and the distribution in 30-day bins. Present the choice of **H** as a trade-off between repurchase coverage, timeliness of detection and the training weeks left after the embargoed split (5.9), and set **R~max~** from the same distribution.
+Retail is non-contractual, so churn is inferred from a period without purchases. Time between consecutive purchase occasions (per repurchase, not per customer): mean, median, percentiles and the distribution in 30-day bins. Present the choice of **H** as a trade-off between repurchase coverage, timeliness of detection and the training weeks left after the embargoed split (5.6), and set **R~max~** from the same distribution.
 
 ## 4.6 Customer Groups by Purchase Cadence
 
@@ -199,73 +199,50 @@ A table that links each finding to the design decision it supports in Chapter 5:
 
 # 5. Data Preparation
 
-## 5.1 Data Cleaning
+## 5.1 Objective
 
-Clean transaction records using documented, reproducible rules. Report the per-rule data-quality breakdown measured on the raw data (missing Customer ID, exact duplicates, invalid Quantity/Price, cancellations, non-product stock codes) and the rows and customers kept after combining all rules.
+Turn the cleaned transactions into a leakage-safe **Customer × Snapshot Date** modeling dataset: clean the raw rows (5.2), build the weekly populations (5.3), attach the churn label (5.4) and point-in-time features (5.5), then split the rows chronologically with an embargo (5.6). State the frozen configuration inherited from 4.7: H = 90 days, R~max~ = 136 days (P90 gap), cooldown C = H, 6-month warm-up, weekly (Monday) snapshots.
 
-## 5.2 Valid Transaction Definition
+## 5.2 Data Cleaning
 
-A **valid purchase** row must satisfy all of the following:
+The value conventions are defined in 3.5; here they become one reproducible **valid purchase** filter. A row is kept only if it has a Customer ID, is not a cancellation (invoice starting with "C"; cancellations are kept separately for cancellation features), has Quantity > 0 and Price > 0, is a real product (non-product codes such as postage, manual adjustments and bank charges are discovered empirically and excluded), and is not an exact duplicate.
 
-| Rule | Treatment |
-|--------------------|----------------------------------------------------------|
-| Customer ID present | Rows without Customer ID are excluded from customer history (still counted in 4.2 overview). |
-| Not a cancellation | Invoices starting with "C" are excluded from purchases; kept separately for cancellation features. |
-| Quantity > 0 and Price > 0 | Otherwise excluded. |
-| Product stock code | Non-product codes (e.g. postage, manual adjustments, bank charges, marketplace fees) are excluded; the final list is documented. |
-| Exact duplicates | Removed. |
+Report the per-rule data-quality breakdown measured on the raw data and the rows and customers kept after combining all rules. Valid rows are collapsed into **purchase occasions** (one per distinct invoice); frequency, inter-purchase intervals and the label are computed on occasions, not rows.
 
-A **purchase occasion** is one distinct invoice (or one customer-day, if chosen and documented). Frequency and inter-purchase intervals are computed on purchase occasions, not rows.
+## 5.3 Population Construction
 
-## 5.3 Customer History Construction
-
-Aggregate valid transaction history by customer while preserving timestamps and product information.
-
-## 5.4 Eligibility Construction
-
-Eligibility is built in two steps.
-
-**Step 1 — Weekly active-customer base.** At each weekly date *t*, a customer is active if:
+**Time window and eligibility.** Customer histories span the full data period; after the warm-up, one snapshot is taken every Monday. At each weekly date *t*, a customer is **eligible (active)** if:
 
 1. at least one valid purchase exists on or before *t* (existing customer);
-2. Recency at *t* ≤ R~max~ (activity condition);
-3. *t* lies within the snapshot period (after warm-up; *t + H* ≤ data end for labeled rows).
+2. Recency at *t* ≤ R~max~ (activity condition).
 
-**Step 2 — Population flags on the base table.**
+The eligible rows form **one weekly active-customer base table**; features and labels are computed once on it, and both populations are flags on the same table:
 
 | Flag | Rule |
 |--------------------|----------------------------------------------------------|
-| `in_training_sample` | Row selected by the eligibility-episode rule (5.4). Computed per customer in date order. |
 | `in_scoring_population` | Row is active and the customer is not under suppression at *t*. In the historical data there are no real campaigns, so suppression is empty and every active row is in the Scoring Population (see 7.1). |
-| `sample_weight` | 1 / (number of weekly active rows of the customer in the training period); used only by the ablation scheme (6.10). |
+| `in_training_sample` | Row selected by the eligibility-episode rule below. Computed per customer in date order. |
+| `sample_weight` | 1 / (number of weekly active rows of the customer in the training period); filled in after the split (5.6) and used only by the ablation scheme (6.10). |
 
 **Training sample — eligibility-episode rule.** Consecutive weekly snapshots of a customer are near-duplicates with overlapping label windows, so the Training Population is sampled per customer: take a row at the first active week *t*, then no further training row until the first active week ≥ *t* + C (C = H = 90 days); a customer who exceeds R~max~ and later returns starts a new episode. Training labels then have non-overlapping windows and each customer contributes a similar number of rows. The rule applies **only to training** — validation, test and scoring keep every active row. Alternative scheme: all active rows with weight 1 / n~i~ (6.10).
 
-Check the sensitivity of population size and churn rate to R~max~ (e.g. P90 versus P95).
+**Results.** Report the base-table size, the weekly all-active vs. episode-sampled row counts (rows, rows per customer), the **weekly Scoring Population size** over time — the pool from which marketing selects Top-K each week — and the sensitivity of population size and churn rate to R~max~ (P90 versus P95).
 
-## 5.5 Customer Snapshot Construction
+## 5.4 Churn Label Construction
 
-Construct **one weekly active-customer base table** of Customer × Snapshot Date rows, then compute features and labels once for this table. The Training Population and the Scoring Population are filters on it (via the flags above), which guarantees that both use identical feature and label definitions.
+Use only the prediction window (t, t + H] to determine churn, applying the same valid-purchase definition as 5.2. A row is labelable only if t + H ≤ data end; later snapshots can be scored but not labeled.
 
-Compare weekly all-active and weekly episode-based snapshots (rows, rows per customer) to justify the training-only episode rule, and report the **weekly Scoring Population size** over time — the pool from which marketing selects Top-K each week.
+**Label EDA.** Report the overall churn rate early — churn may be the *majority* class, which changes how PR-AUC and Precision should be read. Compare the label balance of the training sample and the Scoring Population, and show the churn rate by snapshot month (seasonality).
 
-## 5.6 Feature Engineering
+## 5.5 Feature Engineering
 
-Generate historical features using information available up to the snapshot date only.
+Generate historical features using information available up to the snapshot date only (RFM, purchase, temporal, product and cancellation groups). Report summary statistics, the **distribution of each feature split by churn outcome**, and churn by point-in-time frequency and monetary decile.
 
-## 5.7 Churn Label Construction
+## 5.6 Leakage Prevention and Temporal Split
 
-Use only the prediction window (t, t + H] to determine churn, applying the same valid-purchase definition as 5.2.
+**Leakage prevention.** No future information may be used in feature construction; the prediction window is reserved for label construction. Verify the as-of construction directly. Aggregates that depend on the whole dataset (scalers, encoders, imputation values, percentile thresholds) are fitted on the training period only.
 
-**Label EDA.** Report the overall churn rate early — churn may be the *majority* class, which changes how PR-AUC and Precision should be read. Compare the label balance of the training sample and the Scoring Population, show the churn rate by snapshot month (seasonality), and churn by point-in-time frequency and monetary value.
-
-## 5.8 Leakage Prevention
-
-No future information may be used in feature construction. The prediction window is reserved for label construction. Aggregates that depend on the whole dataset (scalers, encoders, imputation values, percentile thresholds) are fitted on the training period only.
-
-## 5.9 Temporal Dataset Split with Embargo
-
-Split chronologically by snapshot date into train, validation and test, with an **embargo of H days** between consecutive periods:
+**Temporal split with embargo.** Split chronologically by snapshot date into train, validation and test, with an **embargo of H days** between consecutive periods:
 
 ::: {.formula}
 first validation date ≥ last training date + H  
@@ -284,7 +261,7 @@ Without the embargo, labels of late training snapshots are observed during the v
 Validation and test therefore measure performance exactly as the model would be used: ranking all active customers each week.
 
 ::: {.note}
-**Illustrative timeline (H = 90 days, weekly Mondays, ≈ 6-month warm-up).** Labelable snapshots run from 2010-06-07 to 2011-09-05 (66 weekly dates).
+**Timeline (H = 90 days, weekly Mondays, 6-month warm-up).** Labelable snapshots run from 2010-06-07 to 2011-09-05 (66 weekly dates).
 
 | Period | Snapshot dates | Weekly dates |
 |------------|------------------------------|------------|
@@ -294,16 +271,16 @@ Validation and test therefore measure performance exactly as the model would be 
 | *Embargo* | *90 days* | *—* |
 | Test | 2011-07-04 → 2011-09-05 | 10 |
 
-About 24 of the 66 weekly dates are consumed by embargoes. If the test period is too short, options are a shorter H, a shorter warm-up, or rolling-origin validation within the training period instead of a separate validation block. The final choice is documented.
+24 of the 66 weekly dates are consumed by embargoes. If the test period is too short, options are a shorter H, a shorter warm-up, or rolling-origin validation within the training period instead of a separate validation block.
 :::
 
 **Feasibility check:** for each candidate H, count labelable weekly scoring dates and the train/validation/test weeks left after the embargoes. The test period should contain enough scoring dates (e.g. ≥ 8) for stable Top-K estimates.
 
 Report the rows actually used per split: episode-sampled rows for training (and for the final refit over train + validation), all active rows for validation and test.
 
-## 5.10 Final Modeling Dataset
+## 5.7 Conclusion
 
-Customer ID, snapshot date, segment flag (one-time / repeat), population flags (`in_training_sample`, `in_scoring_population`), sample weight, historical features, churn label and split assignment, produced by reproducible transformations from a single configuration.
+The final modeling dataset: customer ID, snapshot date, segment flag (one-time / repeat), population flags (`in_training_sample`, `in_scoring_population`), sample weight, historical features, churn label and split assignment, produced by reproducible transformations from a single configuration. Close with a summary table of the result of each step (cleaning, population, label, features, split) handed to Chapter 6.
 
 # 6. Modeling
 

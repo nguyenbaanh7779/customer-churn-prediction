@@ -1,7 +1,7 @@
 \section{Modeling Objective}
 \label{sec:6-1}
 
-Estimate $P(\text{Churn} = 1 \mid \text{Customer History at Snapshot})$ on the final modeling dataset built in Chapter~\ref{ch:data-preparation} (\texttt{modeling\_dataset\_h90.parquet}). Per the Section~\ref{sec:5-9} split table, \textbf{Train} is \texttt{in\_training\_sample} rows within \texttt{split=="train"} (6,453 rows, 46.7\% churn); \textbf{Validation} is every row in \texttt{split=="validation"} (21,514 rows, 52.9\% churn); \textbf{Test} is every row in \texttt{split=="test"} (24,252 rows, 40.1\% churn). The three periods have noticeably different churn base rates -- a direct consequence of the seasonality already documented in Section~\ref{sec:5-7}.
+Estimate $P(\text{Churn} = 1 \mid \text{Customer History at Snapshot})$ on the final modeling dataset built in Chapter~\ref{ch:data-preparation} (\texttt{modeling\_dataset\_h90.parquet}). Per the Section~\ref{sec:5-6} split table, \textbf{Train} is \texttt{in\_training\_sample} rows within \texttt{split=="train"} (6,453 rows, 46.7\% churn); \textbf{Validation} is every row in \texttt{split=="validation"} (21,514 rows, 52.9\% churn); \textbf{Test} is every row in \texttt{split=="test"} (24,252 rows, 40.1\% churn). The three periods have noticeably different churn base rates -- a direct consequence of the seasonality already documented in Section~\ref{sec:5-4}.
 
 \section{Baselines}
 \label{sec:6-2}
@@ -122,7 +122,7 @@ Tune on the validation period while preserving temporal separation (fit on train
 
 $C = 0.01$ (the strongest regularization tried) wins on PR-AUC -- consistent with Section~\ref{sec:6-4}/\ref{sec:6-5}'s finding that the extra features mostly add noise for this training-set size; heavier regularization suppresses that noise.
 
-After selection, the Training Population is \textbf{re-derived over train + validation}: the eligibility-episode rule (Section~\ref{sec:5-4}) is re-applied to every active row between the first train date and the last validation date (not simply the union of the two periods' original flags), giving 12,019 training rows -- nearly double the 6,453 used so far, since the cooldown restarts over a longer window. Retraining $C=0.01$ Logistic Regression on this pool and evaluating \textbf{once} on test:
+After selection, the Training Population is \textbf{re-derived over train + validation}: the eligibility-episode rule (Section~\ref{sec:5-3}) is re-applied to every active row between the first train date and the last validation date (not simply the union of the two periods' original flags), giving 12,019 training rows -- nearly double the 6,453 used so far, since the cooldown restarts over a longer window. Retraining $C=0.01$ Logistic Regression on this pool and evaluating \textbf{once} on test:
 
 \begin{center}
 \begin{tabular}{@{}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}p{1.8cm}@{}}
@@ -179,4 +179,4 @@ Compare two training schemes for the selected model (Logistic Regression, Full f
 \end{tabular}
 \end{center}
 
-\textbf{B is clearly better} on every metric, using $9.5\times$ more rows (61,415 vs.\ 6,453). The episode rule still serves its purpose -- cutting near-duplicate rows and training time by over 90\% (Section~\ref{sec:5-5}) -- but for this dataset's size, that reduction costs some predictive quality: with so few customers and snapshots to begin with, discarding the correlated-but-informative extra rows removes more signal than it removes redundancy. For production use at this data volume, \textbf{Scheme B (all weekly active rows, weighted)} is the better default; the episode scheme remains attractive mainly as the data volume grows and training cost becomes the binding constraint.
+\textbf{B is clearly better} on every metric, using $9.5\times$ more rows (61,415 vs.\ 6,453). The episode rule still serves its purpose -- cutting near-duplicate rows and training time by over 90\% (Section~\ref{sec:5-3}) -- but for this dataset's size, that reduction costs some predictive quality: with so few customers and snapshots to begin with, discarding the correlated-but-informative extra rows removes more signal than it removes redundancy. For production use at this data volume, \textbf{Scheme B (all weekly active rows, weighted)} is the better default; the episode scheme remains attractive mainly as the data volume grows and training cost becomes the binding constraint.
