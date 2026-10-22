@@ -144,7 +144,7 @@ Generate historical features using information available up to the snapshot date
     Tenure (days) & 277.9 & 248.8 & 733.9 \\
     Mean inter-purchase gap so far (days) & 76.9 & 56.0 & 714.2 \\
     Recency / typical gap & 300.0 & 0.63 & 195,604 \\
-    Activity in last 90 days (occasions) & 4.17 & 1 & 361 \\
+    Activity in last 90 days (occasions) & 1.67 & 1 & 86 \\
     Distinct products so far & 86.2 & 53 & 2,515 \\
     Cancellations so far & 1.49 & 0 & 112 \\
     Cancellation value share so far & 0.022 & 0.000 & 0.896 \\
@@ -161,7 +161,7 @@ Generate historical features using information available up to the snapshot date
 \end{center}
 
 \begin{itemize}
-    \item \textbf{Strong separation} for the RFM and activity features. Non-churned rows cluster at low recency (median 33 days), while churned rows spread almost evenly up to 136 days (median 57). A third of churned rows have a single purchase so far, against 12\% of non-churned rows (median frequency 2 vs.\ 5), and their median monetary value is \pounds616 vs.\ \pounds1,688. 54\% of churned rows had no purchase in the last 90 days, against 32\%.
+    \item \textbf{Strong separation} for the RFM and activity features. Non-churned rows cluster at low recency (median 33 days), while churned rows spread almost evenly up to 136 days (median 57). A third of churned rows have a single purchase so far, against 12\% of non-churned rows (median frequency 2 vs.\ 5), and their median monetary value is \pounds616 vs.\ \pounds1,688. 27\% of churned rows had no purchase in the last 90 days, against 14\% of non-churned rows, and only 6\% had three or more, against 27\%.
     \item \textbf{Moderate separation} for tenure (median 173 vs.\ 270 days), the mean inter-purchase gap (74 vs.\ 44 days) and distinct products (34 vs.\ 71): churners tend to be newer, slower and narrower buyers.
     \item \textbf{Weak separation} for average order value (median \pounds269 vs.\ \pounds324) and recency relative to the typical gap, whose two distributions nearly overlap. Rows with cancellations churn \emph{less} (65\% of churned rows have none, against 41\%), because cancellations come with more buying overall.
     \item \textbf{Skew and missing values.} Monetary, frequency and product counts span several orders of magnitude, which motivates the log transform applied before modeling (Chapter~\ref{ch:modeling}); the two gap features are missing for 22.5\% of labeled rows (one-time customers), handled by a median imputer fitted on training rows only.

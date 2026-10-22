@@ -57,7 +57,7 @@ Add purchase-behavior and temporal features (average order value, tenure, mean i
     \toprule
     ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
     \midrule
-    0.766 & 0.743 & 0.794 & 1.502 \\
+    0.767 & 0.744 & 0.796 & 1.506 \\
     \bottomrule
 \end{tabular}
 \end{center}
@@ -75,13 +75,13 @@ Add product- and cancellation-behavior features (distinct products so far, cance
     Feature set & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
     \midrule
     RFM & 0.770 & 0.748 & 0.801 & 1.516 \\
-    Extended & 0.766 & 0.743 & 0.794 & 1.502 \\
-    Full & 0.766 & 0.744 & 0.789 & 1.492 \\
+    Extended & 0.767 & 0.744 & 0.796 & 1.506 \\
+    Full & 0.767 & 0.745 & 0.790 & 1.495 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-Across all three feature sets, performance is essentially flat (ROC-AUC within 0.004, Lift@10\% within 0.024) -- for a linear model on this training population, RFM alone already captures nearly all of the separable signal. The Full feature set is still carried forward to Section~\ref{sec:6-6} so the richer features get a fair chance under algorithms that can exploit non-linear interactions.
+Across all three feature sets, performance is essentially flat (ROC-AUC within 0.003, Lift@10\% within 0.021) -- for a linear model on this training population, RFM alone already captures nearly all of the separable signal. The Full feature set is still carried forward to Section~\ref{sec:6-6} so the richer features get a fair chance under algorithms that can exploit non-linear interactions.
 
 \section{Algorithms}
 \label{sec:6-6}
@@ -93,9 +93,9 @@ Compare Logistic Regression, Random Forest and XGBoost on the Full feature set, 
     \toprule
     Algorithm & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
     \midrule
-    \textbf{Logistic Regression} & \textbf{0.766} & \textbf{0.744} & 0.789 & 1.492 \\
-    Random Forest & 0.763 & 0.736 & 0.786 & 1.487 \\
-    XGBoost & 0.714 & 0.697 & 0.762 & 1.441 \\
+    \textbf{Logistic Regression} & \textbf{0.767} & \textbf{0.745} & \textbf{0.790} & \textbf{1.495} \\
+    Random Forest & 0.765 & 0.738 & 0.785 & 1.484 \\
+    XGBoost & 0.717 & 0.703 & 0.770 & 1.457 \\
     \bottomrule
 \end{tabular}
 \end{center}
@@ -112,10 +112,10 @@ Tune on the validation period while preserving temporal separation (fit on train
     \toprule
     $C$ & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
     \midrule
-    \textbf{0.01} & \textbf{0.770} & \textbf{0.748} & 0.791 & 1.496 \\
-    0.1 & 0.767 & 0.745 & 0.784 & 1.484 \\
-    1.0 & 0.766 & 0.744 & 0.789 & 1.492 \\
-    10.0 & 0.766 & 0.744 & 0.790 & 1.495 \\
+    \textbf{0.01} & \textbf{0.772} & \textbf{0.750} & \textbf{0.799} & \textbf{1.512} \\
+    0.1 & 0.768 & 0.746 & 0.788 & 1.492 \\
+    1.0 & 0.767 & 0.745 & 0.790 & 1.495 \\
+    10.0 & 0.767 & 0.745 & 0.791 & 1.497 \\
     \bottomrule
 \end{tabular}
 \end{center}
@@ -129,17 +129,17 @@ After selection, the Training Population is \textbf{re-derived over train + vali
     \toprule
     ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% & Gain@10\% \\
     \midrule
-    0.764 & 0.659 & 0.773 & 1.929 & 0.193 \\
+    0.765 & 0.658 & 0.758 & 1.891 & 0.189 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-ROC-AUC on test (0.764) closely matches validation (0.770) -- no meaningful overfitting from the refit. PR-AUC is lower on test (0.659 vs.\ 0.748) because the test period's churn rate is lower (40.1\% vs.\ 52.9\% validation) and PR-AUC's baseline moves with the base rate; Lift@10\% (which normalizes for base rate) is actually \emph{higher} on test (1.93 vs.\ 1.50 on validation), confirming the model's ranking ability holds up out of sample.
+ROC-AUC on test (0.765) closely matches validation (0.772) -- no meaningful overfitting from the refit. PR-AUC is lower on test (0.658 vs.\ 0.750) because the test period's churn rate is lower (40.1\% vs.\ 52.9\% validation) and PR-AUC's baseline moves with the base rate; Lift@10\% (which normalizes for base rate) is actually \emph{higher} on test (1.89 vs.\ 1.51 on validation), confirming the model's ranking ability holds up out of sample.
 
 \section{Model Selection}
 \label{sec:6-8}
 
-The final model is \textbf{Logistic Regression, Full feature set, $C = 0.01$}, refit on the train+validation Training Population (12,019 rows) and evaluated once on test. It was selected over Random Forest and XGBoost on validation PR-AUC (Section~\ref{sec:6-6}) despite neither tree ensemble improving on it -- with only a few thousand training rows, the added model capacity did not pay off. The RFM-only feature set (Section~\ref{sec:6-3}) was statistically indistinguishable from the Full set, but Full was retained for the final model since it is evaluated here under the stronger regularization ($C=0.01$) found in tuning, which absorbs the extra features' noise rather than requiring they be dropped by hand. On test, the final model reaches \textbf{Lift@10\% $= 1.93$} and \textbf{Gain@10\% $= 0.193$} -- targeting the top 10\% of ranked customers each week would reach churners at nearly twice the rate of untargeted outreach, capturing 19.3\% of all churners in that 10\% of the population.
+The final model is \textbf{Logistic Regression, Full feature set, $C = 0.01$}, refit on the train+validation Training Population (12,019 rows) and evaluated once on test. It was selected over Random Forest and XGBoost on validation PR-AUC (Section~\ref{sec:6-6}) despite neither tree ensemble improving on it -- with only a few thousand training rows, the added model capacity did not pay off. The RFM-only feature set (Section~\ref{sec:6-3}) was statistically indistinguishable from the Full set, but Full was retained for the final model since it is evaluated here under the stronger regularization ($C=0.01$) found in tuning, which absorbs the extra features' noise rather than requiring they be dropped by hand. On test, the final model reaches \textbf{Lift@10\% $= 1.89$} and \textbf{Gain@10\% $= 0.189$} -- targeting the top 10\% of ranked customers each week would reach churners at nearly twice the rate of untargeted outreach, capturing 18.9\% of all churners in that 10\% of the population.
 
 \section{Model Interpretability}
 \label{sec:6-9}
@@ -150,7 +150,7 @@ SHAP values for the final refit model (\texttt{LinearExplainer}, computed on a s
 \includegraphics[width=0.85\textwidth]{figures/ch8_shap_summary.png}
 \end{center}
 
-By mean absolute SHAP value, the most influential features are \texttt{frequency\_so\_far} and \texttt{monetary\_so\_far} (the two RFM features driving most of the model's separating power, consistent with Sections~\ref{sec:6-3}--\ref{sec:6-5}), followed by the mean inter-purchase gap, cancellation count, and recent activity features. The directions match intuition: higher frequency and monetary value push the prediction toward \emph{not} churning; a longer typical gap between purchases, more cancellations, and low recent activity all push toward churning. \texttt{recency\_to\_typical\_gap} shows the widest spread for its most extreme values (customers far more overdue than their own normal rhythm), the clearest individual red flag in the tail. \textbf{These are associations the model has learned, not causal effects} (Chapter~\ref{ch:evaluation}) -- a high cancellation count predicting churn, for instance, does not mean cancellations cause churn.
+By mean absolute SHAP value, the most influential features are \texttt{frequency\_so\_far} and \texttt{monetary\_so\_far} (the two RFM features driving most of the model's separating power, consistent with Sections~\ref{sec:6-3}--\ref{sec:6-5}), followed by \texttt{activity\_last\_90d}, the cancellation count and the mean inter-purchase gap. Higher frequency, monetary value and recent activity push the prediction toward \emph{not} churning, while a longer typical gap between purchases pushes toward churning. Two directions are conditional on the other features rather than intuitive on their own: more cancellations push toward \emph{not} churning, because cancellations come with more buying overall (Section~\ref{sec:5-5}), and a longer tenure pushes slightly toward churning once frequency is held fixed (a long-standing customer with few purchases is a slow buyer). \texttt{recency\_to\_typical\_gap} shows the widest spread for its most extreme values (customers far more overdue than their own normal rhythm), the clearest individual red flag in the tail. \textbf{These are associations the model has learned, not causal effects} (Chapter~\ref{ch:evaluation}) -- a high cancellation count predicting churn, for instance, does not mean cancellations cause churn.
 
 \section{Training Population Ablation}
 \label{sec:6-10}
@@ -173,8 +173,8 @@ Compare two training schemes for the selected model (Logistic Regression, Full f
     \toprule
     Scheme & ROC-AUC & PR-AUC & Precision@10\% & Lift@10\% \\
     \midrule
-    A -- Episode & 0.750 & 0.631 & 0.716 & 1.787 \\
-    B -- Weighted all & 0.755 & 0.649 & 0.766 & 1.912 \\
+    A -- Episode & 0.752 & 0.632 & 0.713 & 1.780 \\
+    B -- Weighted all & 0.756 & 0.648 & 0.769 & 1.919 \\
     \bottomrule
 \end{tabular}
 \end{center}
