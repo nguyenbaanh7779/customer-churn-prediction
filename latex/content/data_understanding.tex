@@ -27,7 +27,7 @@ The raw dataset (before any cleaning) contains:
 
 The dataset is overwhelmingly UK-based: the \textbf{United Kingdom} accounts for 981,330 rows (91.9\%); the next largest markets are EIRE (17,866), Germany (17,624), France (14,330) and the Netherlands (5,140), each far behind the UK.
 
-After applying the valid-purchase definition (Sections~\ref{sec:5-1}--\ref{sec:5-2}), \textbf{776,577 rows (72.8\%) remain, representing 36,594 purchase occasions (invoices) of 5,852 customers} between 1 December 2009 and 9 December 2011. The rest of this chapter works on this valid-transaction subset; the per-rule data-quality breakdown is reported with the cleaning rules in Section~\ref{sec:5-1}.
+After applying the valid-purchase definition (Section~\ref{sec:5-2}), \textbf{776,577 rows (72.8\%) remain, representing 36,594 purchase occasions (invoices) of 5,852 customers} between 1 December 2009 and 9 December 2011. The rest of this chapter works on this valid-transaction subset; the per-rule data-quality breakdown is reported with the cleaning rules in Section~\ref{sec:5-2}.
 
 \section{Monthly Sales and Seasonality}
 \label{sec:4-3}
@@ -101,7 +101,7 @@ Gaps are highly right-skewed (mean 52.1 days vs.\ median 25.0 days). \textbf{54.
 \end{tabular}
 \end{center}
 
-A shorter horizon labels as churned many customers who would in fact come back (noisier labels); a longer one detects churn later -- at odds with the goal of early identification (Section~\ref{sec:1-2}) -- and, on a two-year window, leaves far fewer labelable weeks for training once two $H$-day embargoes are subtracted (computed in Section~\ref{sec:5-9}). \textbf{$H = 90$ days} covers most repurchases while keeping 24 training weeks; moving to 120 days would add only 5 points of coverage at the cost of more than half the training weeks.
+A shorter horizon labels as churned many customers who would in fact come back (noisier labels); a longer one detects churn later -- at odds with the goal of early identification (Section~\ref{sec:1-2}) -- and, on a two-year window, leaves far fewer labelable weeks for training once two $H$-day embargoes are subtracted (computed in Section~\ref{sec:5-6}). \textbf{$H = 90$ days} covers most repurchases while keeping 24 training weeks; moving to 120 days would add only 5 points of coverage at the cost of more than half the training weeks.
 
 The same distribution sets the \textbf{activity threshold} $R_{\max} = $ P90 $=$ 136 days: a customer whose last purchase is older than this is treated as already lapsed and is not scored. $H$ answers \emph{how long without a purchase counts as churn}; $R_{\max}$ answers \emph{who is still worth predicting for}.
 
@@ -125,7 +125,7 @@ Customers are grouped by purchase cadence -- an illustrative grouping, not a fin
 
 Customers whose usual rhythm is under 90 days generate \textbf{82.2\% of revenue} (48.7\% + 33.5\%). Frequent buyers (under 30 days) are only 12.9\% of customers but 48.7\% of revenue, combining the most purchase occasions with the largest baskets (AOV 598.50 vs.\ 466.43 overall). The 90+ day group still buys, only slowly, and holds 14.6\% of revenue; one-time customers are over a quarter of the base yet only 3.3\% of revenue. The implication for the label: when a customer who normally returns within 90 days goes 90 days without a purchase, that is a departure from their usual rhythm -- exactly the signal a 90-day churn label captures, and it concerns the customers who carry most of the revenue.
 
-\textbf{Per repurchase vs.\ per customer.} The 82.8\% of Section~\ref{sec:4-5} is a share of repurchases, dominated by frequent buyers. Per customer, only \textbf{59.8\% of repeat customers} have an average gap under 90 days (17.8\% under 30 days, 41.9\% at 30--90 days) and 40.2\% buy more slowly; adding the one-time customers, who have no repurchase at all, explains why the churn rate at $H = 90$ is close to one half (Section~\ref{sec:5-7}) even though most repurchases happen within 90 days.
+\textbf{Per repurchase vs.\ per customer.} The 82.8\% of Section~\ref{sec:4-5} is a share of repurchases, dominated by frequent buyers. Per customer, only \textbf{59.8\% of repeat customers} have an average gap under 90 days (17.8\% under 30 days, 41.9\% at 30--90 days) and 40.2\% buy more slowly; adding the one-time customers, who have no repurchase at all, explains why the churn rate at $H = 90$ is close to one half (Section~\ref{sec:5-4}) even though most repurchases happen within 90 days.
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch6_lifecycle_aov_heatmap.png}
@@ -149,14 +149,14 @@ Over the 79 weekly snapshots (Jun 2010 -- Dec 2011), the 90+ day share grows fro
     \toprule
     Finding & Design decision (Chapter~\ref{ch:data-preparation}) \\
     \midrule
-    776,577 valid rows (72.8\%) = 36,594 invoices of 5,852 customers, Dec 2009 -- Dec 2011 & Customer histories built from valid purchase occasions only (Sections~\ref{sec:5-1}--\ref{sec:5-3}) \\
-    About 1,040 customers and GBP 690K revenue per month; peak in Oct--Nov, sharp drop in Dec & Chronological split with embargo; results read per scoring week (Section~\ref{sec:5-9}) \\
-    Only about 1,040 of 5,852 customers buy in a given month & Weekly snapshots of all active customers, judged over a multi-month window (Sections~\ref{sec:5-4}--\ref{sec:5-5}) \\
-    Repeat customers: 72.3\% of customers, 95.6\% of orders, 96.7\% of revenue & Population focused on existing customers (Section~\ref{sec:5-4}) \\
-    54.8\% of repurchases within 30 days, 82.8\% within 90 days; P90 gap $=$ 136 days & Label horizon $H = 90$ days (Section~\ref{sec:5-7}); activity threshold $R_{\max} = 136$ days (Section~\ref{sec:5-4}) \\
+    776,577 valid rows (72.8\%) = 36,594 invoices of 5,852 customers, Dec 2009 -- Dec 2011 & Customer histories built from valid purchase occasions only (Sections~\ref{sec:5-2}--\ref{sec:5-3}) \\
+    About 1,040 customers and GBP 690K revenue per month; peak in Oct--Nov, sharp drop in Dec & Chronological split with embargo; results read per scoring week (Section~\ref{sec:5-6}) \\
+    Only about 1,040 of 5,852 customers buy in a given month & Weekly snapshots of all active customers, judged over a multi-month window (Section~\ref{sec:5-3}) \\
+    Repeat customers: 72.3\% of customers, 95.6\% of orders, 96.7\% of revenue & Population focused on existing customers (Section~\ref{sec:5-3}) \\
+    54.8\% of repurchases within 30 days, 82.8\% within 90 days; P90 gap $=$ 136 days & Label horizon $H = 90$ days (Section~\ref{sec:5-4}); activity threshold $R_{\max} = 136$ days (Section~\ref{sec:5-3}) \\
     Customers with an average gap under 90 days hold 82.2\% of revenue & A 90-day churn label flags departures from the usual rhythm of the most valuable customers \\
     One-time customers: 27.6\% of customers, 3.3\% of revenue & Kept in the population but reported as a separate segment \\
-    Purchase cadence and AOV are largely independent & Features cover both frequency/recency and monetary behavior (Section~\ref{sec:5-6}) \\
+    Purchase cadence and AOV are largely independent & Features cover both frequency/recency and monetary behavior (Section~\ref{sec:5-5}) \\
     \bottomrule
 \end{tabular}
 \end{center}

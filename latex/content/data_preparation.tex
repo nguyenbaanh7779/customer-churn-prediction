@@ -1,7 +1,34 @@
-\section{Data Cleaning}
+\section{Objective}
 \label{sec:5-1}
 
-Clean transaction records using documented, reproducible rules. Each data-quality issue is first measured on the full raw dataset (rows may overlap across rules):
+Turn the cleaned transactions into a leakage-safe modeling dataset of \textbf{Customer $\times$ Snapshot Date} rows: clean the raw rows (Section~\ref{sec:5-2}), build the weekly populations (Section~\ref{sec:5-3}), attach the churn label (Section~\ref{sec:5-4}) and point-in-time features (Section~\ref{sec:5-5}), then split the rows chronologically with an embargo (Section~\ref{sec:5-6}). The chapter implements the design decisions of Section~\ref{sec:4-7} with one frozen configuration:
+
+\begin{center}
+\begin{tabular}{@{}p{5.2cm}p{2.6cm}p{6.3cm}@{}}
+    \toprule
+    Parameter & Value & Origin \\
+    \midrule
+    Prediction horizon $H$ & 90 days & Repurchase coverage and training-data trade-off (Section~\ref{sec:4-5}) \\
+    Activity threshold $R_{\max}$ & 136 days & P90 of the inter-purchase gap (Section~\ref{sec:4-5}) \\
+    Episode cooldown $C$ & 90 days ($= H$) & Non-overlapping label windows for training \\
+    Warm-up & 6 months & Minimum history before the first snapshot \\
+    Snapshot frequency & Weekly (Mondays) & Matches a weekly Top-K marketing cycle \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\section{Data Cleaning}
+\label{sec:5-2}
+
+The raw-value conventions -- cancellation invoices, non-product stock codes and missing Customer ID -- are described in Section~\ref{sec:3-5}. Here they become one reproducible \textbf{valid purchase} filter. A row is kept only if it:
+\begin{itemize}
+    \item has a Customer ID (otherwise it cannot be attached to any customer history);
+    \item is not a cancellation (invoice starting with ``C''); cancellations are kept separately for the cancellation features of Section~\ref{sec:5-5};
+    \item has Quantity $> 0$ and Price $> 0$;
+    \item is a real product, not a non-product stock code;
+    \item is not an exact duplicate of an earlier row.
+\end{itemize}
+Non-product stock codes are discovered empirically -- codes that do not start with a digit, unlike normal product codes such as \texttt{85048} or \texttt{79323P} -- rather than assumed in advance. Each issue is first measured on the full raw dataset (rows may overlap across rules):
 
 \begin{center}
 \begin{tabular}{@{}p{6cm}p{3.5cm}p{3.5cm}@{}}
@@ -17,50 +44,62 @@ Clean transaction records using documented, reproducible rules. Each data-qualit
 \end{tabular}
 \end{center}
 
-\textbf{Missing Customer ID} is by far the largest issue: these rows cannot be attached to any customer history and are necessarily excluded. Non-product stock codes are discovered empirically (codes that do not start with a digit, unlike normal product codes) rather than assumed in advance. Combining all rules into the valid-purchase definition below keeps \textbf{776,577 of 1,067,371 rows (72.8\%)} and 5,852 of the original 5,942 customers -- the remaining 90 customers' entire history consists of invalid rows. This single \texttt{is\_valid} filter is used to build everything that follows.
+\textbf{Result.} Missing Customer ID is by far the largest issue. Combining all rules keeps \textbf{776,577 of 1,067,371 rows (72.8\%)} and 5,852 of the original 5,942 customers; the remaining 90 customers' entire history consists of invalid rows. The valid rows are then collapsed into \textbf{purchase occasions}, one per distinct invoice, carrying the invoice's earliest timestamp, summed revenue and quantity, and the set of products bought. This yields \textbf{36,594 purchase occasions across 5,852 customers}. Frequency, inter-purchase gaps and the churn label are all computed on occasions, not rows.
 
-\section{Valid Transaction Definition}
-\label{sec:5-2}
+\section{Population Construction}
+\label{sec:5-3}
 
-A \textbf{valid purchase} row must satisfy all of the following:
+\textbf{Time window.} Customer histories span the full data period, \textbf{2009-12-01 to 2011-12-09}. The first 6 months are a warm-up, so that every customer has some history at the first snapshot; snapshots are then taken every Monday from \textbf{2010-06-07 to 2011-12-05}, giving \textbf{79 weekly snapshot dates}.
+
+\textbf{Eligibility.} At each snapshot date $t$, a customer is \textbf{eligible (active)} if:
+\begin{enumerate}
+    \item at least one valid purchase exists on or before $t$ (existing customer);
+    \item Recency at $t$ $\leq R_{\max} = 136$ days (still active, not already lost).
+\end{enumerate}
+Customers beyond $R_{\max}$ leave the base and re-enter if they purchase again. The eligible rows of all 79 weeks form \textbf{one weekly active-customer base table}. Features and labels are computed once on this table, and the two populations are flags on it, which guarantees both use identical feature and label definitions:
 
 \begin{center}
-\begin{tabular}{@{}p{3.8cm}p{10.3cm}@{}}
+\begin{tabular}{@{}p{4.6cm}p{9.5cm}@{}}
     \toprule
-    Rule & Treatment \\
+    Flag & Rule \\
     \midrule
-    Customer ID present & Rows without Customer ID are excluded from customer history (still counted in the Section~\ref{sec:4-2} overview). \\
-    Not a cancellation & Invoices starting with "C" are excluded from purchases; kept separately for cancellation features. \\
-    Quantity $>$ 0 and Price $>$ 0 & Otherwise excluded. \\
-    Product stock code & Non-product codes (e.g.\ postage, manual adjustments, bank charges, marketplace fees) are excluded; the final list is documented. \\
-    Exact duplicates & Removed. \\
+    \texttt{in\_scoring\_population} & Row is active and the customer is not under suppression at $t$. The historical data contain no real campaigns, so suppression is empty and every active row is in the \textbf{Scoring Population} (see Section~\ref{sec:7-1}). Used for validation, test and weekly scoring. \\
+    \texttt{in\_training\_sample} & Row selected by the eligibility-episode rule below; the \textbf{Training Population}. \\
+    \texttt{sample\_weight} & $1 /$ (number of weekly active rows of the customer in the training period); filled in once the training period is known (Section~\ref{sec:5-6}) and used only by the ablation scheme (Section~\ref{sec:6-10}). \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-A \textbf{purchase occasion} is one distinct invoice. Frequency and inter-purchase intervals are computed on purchase occasions, not rows: applying this definition to the 776,577 valid rows yields \textbf{36,594 occasions across 5,852 customers}, each occasion carrying its aggregated revenue, quantity and the distinct set of products bought (used by the product-behavior feature in Section~\ref{sec:5-6}).
+\textbf{Training sample: the eligibility-episode rule.} Consecutive weekly snapshots of the same customer differ only slightly (mostly recency grows by 7 days) and their 90-day label windows overlap, so their labels are strongly correlated; long-history customers would also dominate training. The Training Population is therefore sampled per customer, in date order:
+\begin{itemize}
+    \item a training row is taken at the first weekly date $t$ at which the customer is active;
+    \item the customer then contributes no further training row for a cooldown of $C = H = 90$ days -- the next one is the first weekly date $\geq t + C$ at which they are still active;
+    \item a customer who exceeds $R_{\max}$ leaves the active base and, if they purchase again, starts a new episode.
+\end{itemize}
+Each customer's training labels then have non-overlapping prediction windows, and every customer contributes a similar number of rows. The rule is applied \textbf{only to training}; validation, test and scoring keep every active row. As an alternative scheme, all active rows can be used with the per-customer weight $1/n_i$ (\texttt{sample\_weight}), compared in Section~\ref{sec:6-10}.
 
-\section{Customer History Construction}
-\label{sec:5-3}
+\textbf{Result.} The base table has \textbf{208,764 weekly active rows of 5,725 customers}. A direct check confirms every \texttt{in\_training\_sample} row is also an \texttt{in\_scoring\_population} row -- the episode rule only subsets the active base, never adds to it:
 
-Aggregate valid transaction history by customer while preserving timestamps and product information. The resulting history spans \textbf{2009-12-01 to 2011-12-09} ($\approx$2 years) for all 5,852 customers -- the same span and customer count already established in Chapter~\ref{ch:data-understanding}.
+\begin{center}
+\begin{tabular}{@{}p{6.4cm}p{2.4cm}p{2.4cm}p{2.8cm}@{}}
+    \toprule
+    Population & Rows & Customers & Rows per customer \\
+    \midrule
+    Weekly, all active (Scoring Population) & 208,764 & 5,725 & 36.5 \\
+    Weekly, episode cooldown ($C = 90$) (Training Population) & 20,152 & 5,725 & 3.5 \\
+    \bottomrule
+\end{tabular}
+\end{center}
 
-\section{Eligibility Construction}
-\label{sec:5-4}
+The episode rule cuts the weekly rows by more than 90\% for training (from 36.5 to 3.5 rows per customer) while keeping every customer.
 
-Eligibility is built in two steps.
+\begin{center}
+\includegraphics[width=0.85\textwidth]{figures/ch7_weekly_scoring_population.png}
+\end{center}
 
-\textbf{Step 1 -- Weekly active-customer base.} At each weekly date $t$, a customer is active if:
+The weekly Scoring Population -- the pool from which marketing would select its Top-K each week -- averages 2,643 active customers per week (range 2,172--3,218). It has no growth trend: year over year it stays flat, but within the year it is strongly seasonal, building up before Christmas and draining from January to May as customers pass the 136-day threshold.
 
-\begin{enumerate}
-    \item at least one valid purchase exists on or before $t$ (existing customer);
-    \item Recency at $t$ $\leq R_{\max}$ (activity condition);
-    \item $t$ lies within the snapshot period (after warm-up; $t + H \leq$ data end for labeled rows).
-\end{enumerate}
-
-With $R_{\max} = 136.0$ days (the P90 inter-purchase gap from Section~\ref{sec:4-5}, rounded and frozen as the pipeline configuration) and a 6-month warm-up, this produces \textbf{208,764 weekly active-customer base rows}.
-
-\textbf{Sensitivity to $R_{\max}$.} The threshold decides who is labeled and scored. Loosening it from P90 to P95 admits more marginal customers and pushes the churn rate up by nearly 5 points, so the choice materially changes the label distribution:
+\textbf{Sensitivity to $R_{\max}$.} The threshold decides who is labeled and scored. Loosening it from P90 to P95 admits more marginal customers and pushes the churn rate (label defined in Section~\ref{sec:5-4}) up by nearly 5 points, so the choice materially changes the label distribution:
 
 \begin{center}
 \begin{tabular}{@{}p{2.6cm}p{2.2cm}p{2.9cm}p{3.2cm}p{2.3cm}@{}}
@@ -73,61 +112,25 @@ With $R_{\max} = 136.0$ days (the P90 inter-purchase gap from Section~\ref{sec:4
 \end{tabular}
 \end{center}
 
-\textbf{Step 2 -- Population flags on the base table.}
+\section{Churn Label Construction}
+\label{sec:5-4}
+
+\textbf{Definition.} A row at snapshot date $t$ is labeled \textbf{churn $= 1$} if the customer makes no valid purchase in the prediction window $(t,\, t+H]$, and churn $= 0$ otherwise. Only the prediction window is used to determine churn, applying the same valid-purchase definition as Section~\ref{sec:5-2}. A row is \textbf{labelable} only if its full window is observed, i.e.\ $t + H \leq$ data end (2011-12-09); the last 13 weekly snapshots (2011-09-12 to 2011-12-05) can be scored but not labeled.
+
+\textbf{Result.} At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable}, and the churn rate on those rows is \textbf{48.0\%}. Churn is therefore close to a majority class here, not a rare event, which changes how PR-AUC and Precision should be read (Chapter~\ref{ch:evaluation}). It is close to one half even though 82.8\% of repurchases happen within 90 days, because that share is dominated by frequent buyers: per customer, 40\% of repeat customers buy more slowly than every 90 days and one-time customers have no repurchase at all (Section~\ref{sec:4-6}).
+
+\textbf{Label EDA.} The episode-sampled training rows have a churn rate of 49.5\%, close to the 48.0\% of the full Scoring Population -- the subsampling does not materially bias the label distribution.
 
 \begin{center}
-\begin{tabular}{@{}p{4.6cm}p{9.5cm}@{}}
-    \toprule
-    Flag & Rule \\
-    \midrule
-    \texttt{in\_training\_sample} & Row selected by the eligibility-episode rule described below. Computed per customer in date order. \\
-    \texttt{in\_scoring\_population} & Row is active and the customer is not under suppression at $t$. In the historical data there are no real campaigns, so suppression is empty and every active row is in the Scoring Population (see Section~\ref{sec:7-1}). \\
-    \texttt{sample\_weight} & $1 /$ (number of weekly active rows of the customer in the training period); used only by the ablation scheme (Section~\ref{sec:6-10}). \\
-    \bottomrule
-\end{tabular}
+\includegraphics[width=0.85\textwidth]{figures/ch7_churn_rate_by_month.png}
 \end{center}
 
-\textbf{Training sample: the eligibility-episode rule.} Consecutive weekly snapshots of the same customer differ only slightly (mostly recency grows by 7 days) and their 90-day label windows overlap, so their labels are strongly correlated; long-history customers would also dominate training. The Training Population is therefore sampled per customer, in date order:
-\begin{itemize}
-    \item a training row is taken at the first weekly date $t$ at which the customer is active;
-    \item the customer then contributes no further training row for a cooldown of $C = H = 90$ days -- the next one is the first weekly date $\geq t + C$ at which they are still active;
-    \item a customer who exceeds $R_{\max}$ leaves the active base and, if they purchase again, starts a new episode.
-\end{itemize}
-Each customer's training labels then have non-overlapping prediction windows, and every customer contributes a similar number of rows. The rule is applied \textbf{only to training}; validation, test and scoring keep every active row. As an alternative scheme, all active rows can be used with a per-customer weight $1/n_i$ (\texttt{sample\_weight}), compared in Section~\ref{sec:6-10}.
-
-Applying the episode-cooldown rule ($C = 90$ days) to the 208,764 active rows selects \textbf{20,152 rows (9.7\%) as \texttt{in\_training\_sample}}; \texttt{in\_scoring\_population} is \texttt{True} for all 208,764 active rows (every active row is scored, since suppression is empty). \texttt{sample\_weight} is left unset here and filled in once the training period is known, in Section~\ref{sec:5-9}.
-
-\section{Customer Snapshot Construction}
-\label{sec:5-5}
-
-Construct \textbf{one weekly active-customer base table} of Customer $\times$ Snapshot Date rows, then compute features and labels once for this table. The Training Population and the Scoring Population are filters on it (via the flags above), which guarantees that both use identical feature and label definitions. A direct check confirms every \texttt{in\_training\_sample} row is also an \texttt{in\_scoring\_population} row (the episode rule only subsets the active base, never adds to it) -- the base table has shape $(208{,}764,\ 8)$ at this point, before feature engineering.
-
-\textbf{Snapshot scheme comparison.}
-
-\begin{center}
-\begin{tabular}{@{}p{4.6cm}p{3cm}p{3cm}p{3cm}@{}}
-    \toprule
-    Scheme & Rows & Customers & Rows per customer \\
-    \midrule
-    Daily, all active & 1,477,685 & 5,753 & 256.9 \\
-    Weekly, all active & 208,764 & 5,725 & 36.5 \\
-    Weekly, episode cooldown ($C = 90$) & 20,152 & 5,725 & 3.5 \\
-    \bottomrule
-\end{tabular}
-\end{center}
-
-A daily grid carries 7.1$\times$ the rows of weekly snapshots, almost all of them near-duplicates, which is why snapshots are weekly. The episode-cooldown rule then cuts the weekly rows by more than 90\% for training while keeping every customer.
-
-\begin{center}
-\includegraphics[width=0.85\textwidth]{figures/ch7_weekly_scoring_population.png}
-\end{center}
-
-The weekly Scoring Population -- the pool from which marketing would select its Top-K each week -- is stable, averaging 2,643 active customers per week (range 2,172--3,218) over the 79 snapshot weeks. This is far larger than the 20,152-row training sample, confirming that the episode rule must not be applied to scoring.
+The monthly churn rate ranges from 34.8\% (Sep 2011) to 62.7\% (Dec 2010) and is noticeably higher for snapshots taken in winter (Nov--Feb), whose 90-day windows fall in the post-Christmas low season -- the seasonality of Section~\ref{sec:4-3} carried into the label.
 
 \section{Feature Engineering}
-\label{sec:5-6}
+\label{sec:5-5}
 
-Generate historical features using information available up to the snapshot date only, via a single backward as-of-merge primitive applied to cumulative per-occasion statistics -- the same mechanism used for recency itself, so every feature is leakage-safe by construction (verified explicitly in Section~\ref{sec:5-8}). A representative subset of each standard churn-feature group is implemented:
+Generate historical features using information available up to the snapshot date only, via a single backward as-of-merge primitive applied to cumulative per-occasion statistics -- the same mechanism used for recency itself, so every feature is leakage-safe by construction (verified explicitly in Section~\ref{sec:5-6}). A representative subset of each standard churn-feature group is implemented: RFM (recency, frequency, monetary), purchase behavior (average order value), temporal behavior (tenure, mean inter-purchase gap, recency relative to that gap, activity in the last 90 days), product behavior (distinct products so far) and cancellation behavior (cancellation count and value share so far).
 
 \begin{center}
 \begin{tabular}{@{}p{3.6cm}p{2.3cm}p{2.3cm}p{3.2cm}@{}}
@@ -149,22 +152,22 @@ Generate historical features using information available up to the snapshot date
 \end{tabular}
 \end{center}
 
-\textbf{Note.} \textbf{A known instability.} \texttt{recency / typical gap} is undefined for the 43,970 rows where the customer has only one occasion so far (no prior gap exists) and is set to \texttt{NaN}. A further 31 rows had a \texttt{mean\_gap\_so\_far} of exactly zero (customers with multiple invoices at the same instant), which would otherwise divide to \texttt{inf} and break downstream modeling in Chapter~\ref{ch:modeling} -- these are also set to \texttt{NaN} rather than \texttt{inf}. Even after this fix the ratio's long tail is extreme (max 195,604, against a median of 0.63) because it divides by a very small but non-zero typical gap; a stricter pipeline would additionally winsorize this feature before modeling.
+\textbf{A known instability.} \texttt{recency / typical gap} is undefined for the 43,970 rows where the customer has only one occasion so far (no prior gap exists) and is set to \texttt{NaN}. A further 31 rows had a \texttt{mean\_gap\_so\_far} of exactly zero (customers with multiple invoices at the same instant), which would otherwise divide to \texttt{inf} and break downstream modeling in Chapter~\ref{ch:modeling} -- these are also set to \texttt{NaN} rather than \texttt{inf}. Even after this fix the ratio's long tail is extreme (max 195,604, against a median of 0.63) because it divides by a very small but non-zero typical gap; a stricter pipeline would additionally winsorize this feature before modeling.
 
-\section{Churn Label Construction}
-\label{sec:5-7}
-
-Use only the prediction window $(t,\, t+H]$ to determine churn, applying the same valid-purchase definition as Section~\ref{sec:5-2}. At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable} (their full prediction window is observed before the data end); the churn rate on those rows is \textbf{48.0\%}. Churn is therefore close to a majority class here, not a rare event, which changes how PR-AUC and Precision should be read (Chapter~\ref{ch:evaluation}). It is close to one half even though 82.8\% of repurchases happen within 90 days, because that share is dominated by frequent buyers: per customer, 40\% of repeat customers buy more slowly than every 90 days and one-time customers have no repurchase at all (Section~\ref{sec:4-6}).
-
-\textbf{Label EDA.} The episode-sampled training rows have a churn rate of 49.5\%, close to the 48.0\% of the full Scoring Population -- the subsampling does not materially bias the label distribution.
+\textbf{Feature distributions.} The figure below shows each feature on the 172,561 labeled rows, split by churn outcome (shares of each class's rows; right-skewed and count features on a symmetric-log axis, cut at their 99th percentile):
 
 \begin{center}
-\includegraphics[width=0.85\textwidth]{figures/ch7_churn_rate_by_month.png}
+\includegraphics[width=\textwidth]{figures/ch7_feature_distributions.png}
 \end{center}
 
-The monthly churn rate ranges from 34.8\% (Sep 2011) to 62.7\% (Dec 2010) and is noticeably higher for snapshots taken in winter (Nov--Feb), whose 90-day windows fall in the post-Christmas low season -- the seasonality of Section~\ref{sec:4-3} carried into the label.
+\begin{itemize}
+    \item \textbf{Strong separation} for the RFM and activity features. Non-churned rows cluster at low recency (median 33 days), while churned rows spread almost evenly up to 136 days (median 57). A third of churned rows have a single purchase so far, against 12\% of non-churned rows (median frequency 2 vs.\ 5), and their median monetary value is \pounds616 vs.\ \pounds1,688. 54\% of churned rows had no purchase in the last 90 days, against 32\%.
+    \item \textbf{Moderate separation} for tenure (median 173 vs.\ 270 days), the mean inter-purchase gap (74 vs.\ 44 days) and distinct products (34 vs.\ 71): churners tend to be newer, slower and narrower buyers.
+    \item \textbf{Weak separation} for average order value (median \pounds269 vs.\ \pounds324) and recency relative to the typical gap, whose two distributions nearly overlap. Rows with cancellations churn \emph{less} (65\% of churned rows have none, against 41\%), because cancellations come with more buying overall.
+    \item \textbf{Skew and missing values.} Monetary, frequency and product counts span several orders of magnitude, which motivates the log transform applied before modeling (Chapter~\ref{ch:modeling}); the two gap features are missing for 22.5\% of labeled rows (one-time customers), handled by a median imputer fitted on training rows only.
+\end{itemize}
 
-Churn also falls with point-in-time purchase behavior (features from Section~\ref{sec:5-6}, as of the snapshot date):
+\textbf{Churn by feature decile.} Churn also falls steadily with point-in-time purchase behavior:
 
 \begin{center}
 \begin{tabular}{@{}p{3cm}p{4.2cm}p{4.2cm}@{}}
@@ -180,17 +183,14 @@ Churn also falls with point-in-time purchase behavior (features from Section~\re
 
 The top deciles churn far less than the bottom ones -- a clear univariate signal for frequency and monetary features. The frequency curve is not monotonic in its lower deciles because many rows tie at one or two purchases so far. These point-in-time gaps are narrower than an end-of-data view would suggest, since that view would let customers' future purchases inflate their frequency and monetary values.
 
-\section{Leakage Prevention}
-\label{sec:5-8}
+\section{Leakage Prevention and Temporal Split}
+\label{sec:5-6}
 
-No future information may be used in feature construction. The prediction window is reserved for label construction. Aggregates that depend on the whole dataset (scalers, encoders, imputation values, percentile thresholds) are fitted on the training period only, once modeling starts in Chapter~\ref{ch:modeling}. A direct check re-derives one feature (\texttt{frequency\_so\_far}) for every base row and asserts its source timestamp never exceeds the row's snapshot date; this passes for all 208,764 rows, confirming the as-of-merge construction is leakage-safe by result, not only by design.
+\textbf{Leakage prevention.} No future information may be used in feature construction; the prediction window is reserved for label construction. A direct check re-derives one feature (\texttt{frequency\_so\_far}) for every base row and asserts its source timestamp never exceeds the row's snapshot date; this passes for all 208,764 rows, confirming the as-of-merge construction is leakage-safe by result, not only by design. Aggregates that depend on the whole dataset (scalers, encoders, imputation values, percentile thresholds) are fitted on the training period only, once modeling starts in Chapter~\ref{ch:modeling}.
 
 \textbf{Caveat.} $R_{\max}$ and $H$ themselves were chosen from inter-purchase gaps measured over the \emph{full} dataset in Chapter~\ref{ch:data-understanding}, not the training period alone. A stricter pipeline would re-derive these thresholds from training-period data only; here they are treated as fixed configuration, consistent with their role as project-level design choices rather than learned parameters.
 
-\section{Temporal Dataset Split with Embargo}
-\label{sec:5-9}
-
-Split chronologically by snapshot date into train, validation and test, with an \textbf{embargo of $H$ days} between consecutive periods:
+\textbf{Temporal split with embargo.} Split chronologically by snapshot date into train, validation and test, with an \textbf{embargo of $H$ days} between consecutive periods:
 \begin{align*}
     \text{first validation date} &\geq \text{last training date} + H \\
     \text{first test date} &\geq \text{last validation date} + H
@@ -212,7 +212,7 @@ Without the embargo, labels of late training snapshots are observed during the v
 
 Validation and test therefore measure performance exactly as the model would be used: ranking all active customers each week.
 
-\textbf{Computed timeline ($H = 90$ days, weekly Mondays, 6-month warm-up).} Validation and test are sized to fixed operational targets (8 and 10 weeks) and taken from the end of the 66 labelable weekly dates working backward, with an embargo before each; train absorbs the remaining weeks. This is no longer the illustrative example once sketched for this section -- it is the actual computed split, and it reproduces that example's dates exactly:
+\textbf{Computed timeline ($H = 90$ days, weekly Mondays, 6-month warm-up).} Validation and test are sized to fixed operational targets (8 and 10 weeks) and taken from the end of the 66 labelable weekly dates working backward, with an embargo before each; train absorbs the remaining weeks:
 
 \begin{center}
 \begin{tabular}{@{}p{2.6cm}p{5.5cm}p{3cm}@{}}
@@ -232,7 +232,7 @@ Validation and test therefore measure performance exactly as the model would be 
 \includegraphics[width=0.85\textwidth]{figures/ch7_split_timeline.png}
 \end{center}
 
-24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 34 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Sections~\ref{sec:4-3} and~\ref{sec:5-7} shifts the base rate between periods, not just between individual weeks:
+24 of the 66 labelable weekly dates are consumed by the two embargoes; the remaining 42 weeks split into train/validation/test as above. The resulting churn rate differs by split -- a reminder that the seasonality already seen in Sections~\ref{sec:4-3} and~\ref{sec:5-4} shifts the base rate between periods, not just between individual weeks:
 
 \begin{center}
 \begin{tabular}{@{}p{2.6cm}p{2.3cm}p{2.6cm}p{2.3cm}@{}}
@@ -281,7 +281,23 @@ For the final model, the episode rule is re-applied over the whole window from t
 
 A longer horizon both removes labelable weeks at the end of the data and lengthens the two embargoes. All three candidates keep the 8 validation and 10 test weeks, but $H = 120$ leaves only 10 training weeks -- too thin to be practical -- which, together with the repurchase coverage of Section~\ref{sec:4-5}, supports $H = 90$.
 
-\section{Final Modeling Dataset}
-\label{sec:5-10}
+\section{Conclusion}
+\label{sec:5-7}
 
-Customer ID, snapshot date, segment flag (one-time / repeat), population flags (\texttt{in\_training\_sample}, \texttt{in\_scoring\_population}), sample weight, historical features, churn label and split assignment, produced by reproducible transformations from a single configuration. The final table has \textbf{208,764 rows and 20 columns}: 164,794 rows (79.0\%) are \texttt{repeat}-segment and 43,970 (21.0\%) are \texttt{one-time}-segment at their respective snapshot dates. The table is saved to \texttt{data/processed/}\allowbreak\texttt{modeling\_dataset\_h90.parquet} ($\approx$6.5\,MB) for direct reuse in Chapter~\ref{ch:modeling}.
+The final modeling table has one row per \textbf{Customer $\times$ Snapshot Date}, with the customer ID, snapshot date, a segment flag (one-time / repeat, based on frequency so far), the population flags (\texttt{in\_training\_sample}, \texttt{in\_scoring\_population}), the sample weight, the 11 historical features, the churn label and the split assignment -- produced by reproducible transformations from a single configuration. It has \textbf{208,764 rows and 20 columns}: 164,794 rows (79.0\%) are \texttt{repeat}-segment and 43,970 (21.0\%) are \texttt{one-time}-segment at their respective snapshot dates. The table is saved to \texttt{data/processed/}\allowbreak\texttt{modeling\_dataset\_h90.parquet} ($\approx$6.5\,MB) for direct reuse in Chapter~\ref{ch:modeling}.
+
+\begin{center}
+\begin{tabular}{@{}p{3.4cm}p{10.7cm}@{}}
+    \toprule
+    Step & Result \\
+    \midrule
+    Cleaning & 776,577 of 1,067,371 rows valid (72.8\%) $\rightarrow$ 36,594 purchase occasions of 5,852 customers \\
+    Population & 208,764 weekly active rows of 5,725 customers over 79 weeks; 20,152 episode rows flagged for training \\
+    Label & 172,561 labelable rows (82.7\%), churn rate 48.0\% -- close to balanced and seasonal \\
+    Features & 11 point-in-time features in five groups; RFM and activity separate churners most clearly \\
+    Split & Train 6,453 episode rows (46.7\% churn); validation 21,514 rows (52.9\%); test 24,252 rows (40.1\%); final refit 12,019 episode rows \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Every row's features use only information up to its snapshot date, and the embargoed split keeps each evaluation period unseen by the periods before it -- so the models of Chapter~\ref{ch:modeling} are trained and evaluated as they would be used: scoring all active customers each week.

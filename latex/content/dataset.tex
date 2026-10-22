@@ -6,7 +6,7 @@ The project uses the publicly available \textbf{Online Retail II} dataset as a h
 \section{Dataset Characteristics and Limitations}
 \label{sec:3-2}
 
-The dataset covers the period from December 2009 to December 2011. Its relatively limited historical coverage constrains the number of customer snapshots and future observation periods available for churn labeling (Section~\ref{sec:5-9}). In addition, the retailer serves both individual customers and wholesalers, resulting in substantial differences in purchasing frequency and transaction value. Seasonal demand, particularly around Christmas, may also influence purchasing patterns and should be considered when designing temporal validation and evaluating model performance.
+The dataset covers the period from December 2009 to December 2011. Its relatively limited historical coverage constrains the number of customer snapshots and future observation periods available for churn labeling (Section~\ref{sec:5-6}). In addition, the retailer serves both individual customers and wholesalers, resulting in substantial differences in purchasing frequency and transaction value. Seasonal demand, particularly around Christmas, may also influence purchasing patterns and should be considered when designing temporal validation and evaluating model performance.
 
 \section{Raw Data Schema}
 \label{sec:3-3}
@@ -24,7 +24,7 @@ The raw dataset is a single flat transaction table (not pre-split into separate 
     \texttt{Quantity} & integer & Units on this line. Negative for cancellations. \\
     \texttt{InvoiceDate} & datetime & Timestamp of the transaction line. \\
     \texttt{Price} & float & Unit price (GBP). \\
-    \texttt{Customer ID} & float & Customer identifier. Missing for a meaningful share of rows (Section~\ref{sec:5-1}) -- these cannot be attached to any customer history. \\
+    \texttt{Customer ID} & float & Customer identifier. Missing for a meaningful share of rows (Section~\ref{sec:5-2}) -- these cannot be attached to any customer history. \\
     \texttt{Country} & string & Customer's country, self-reported at checkout. \\
     \bottomrule
 \end{tabular}
@@ -60,8 +60,8 @@ These raw columns are renamed to the snake\_case names used throughout the pipel
 Three value conventions recur throughout this report and are worth stating once, up front:
 
 \begin{itemize}
-    \item \textbf{Cancellation invoices.} An \texttt{invoice\_id} starting with ``C'' marks a cancellation of a previous purchase, with negative \texttt{quantity}. These rows are excluded from purchase history (Section~\ref{sec:5-2}) but kept separately to build the cancellation features in Section~\ref{sec:5-6}.
-    \item \textbf{Non-product stock codes.} A small number of \texttt{product\_id} values are not real products but operational/accounting entries -- postage (\texttt{POST}, \texttt{DOT}), manual adjustments (\texttt{M}), carriage (\texttt{C2}), discounts (\texttt{D}), samples (\texttt{S}), bank charges and similar. These are discovered empirically (Section~\ref{sec:5-1}), not assumed in advance, and are excluded from product- and customer-level analysis.
+    \item \textbf{Cancellation invoices.} An \texttt{invoice\_id} starting with ``C'' marks a cancellation of a previous purchase, with negative \texttt{quantity}. These rows are excluded from purchase history (Section~\ref{sec:5-2}) but kept separately to build the cancellation features in Section~\ref{sec:5-5}.
+    \item \textbf{Non-product stock codes.} A small number of \texttt{product\_id} values are not real products but operational/accounting entries -- postage (\texttt{POST}, \texttt{DOT}), manual adjustments (\texttt{M}), carriage (\texttt{C2}), discounts (\texttt{D}), samples (\texttt{S}), bank charges and similar. These are discovered empirically (Section~\ref{sec:5-2}), not assumed in advance, and are excluded from product- and customer-level analysis.
     \item \textbf{Missing Customer ID.} Rows without a \texttt{customer\_id} cannot be attached to any customer history and are excluded from every customer-level analysis from Section~\ref{sec:4-3} onward, although they are still counted in the raw totals of Section~\ref{sec:4-2}.
 \end{itemize}
 
