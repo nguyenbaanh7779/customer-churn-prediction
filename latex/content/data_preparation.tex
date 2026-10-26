@@ -1,7 +1,7 @@
 \section{Objective}
 \label{sec:5-1}
 
-Turn the cleaned transactions into a leakage-safe modeling dataset of \textbf{Customer $\times$ Snapshot Date} rows: clean the raw rows (Section~\ref{sec:5-2}), build the weekly populations (Section~\ref{sec:5-3}), attach the churn label (Section~\ref{sec:5-4}) and point-in-time features (Section~\ref{sec:5-5}), then split the rows chronologically with an embargo (Section~\ref{sec:5-6}). The chapter implements the design decisions of Section~\ref{sec:4-7} with one frozen configuration:
+Turn the cleaned transactions into a leakage-safe modeling dataset of \textbf{Customer $\times$ Snapshot Date} rows: clean the raw rows (Section~\ref{sec:5-2}), build the weekly populations (Section~\ref{sec:5-3}), attach the churn label (Section~\ref{sec:5-4}) and point-in-time features, customer value and RFM segments (Section~\ref{sec:5-5}), then split the rows chronologically with an embargo (Section~\ref{sec:5-6}). The chapter implements the design decisions of Section~\ref{sec:4-8} with one frozen configuration:
 
 \begin{center}
 \begin{tabular}{@{}p{5.2cm}p{2.6cm}p{6.3cm}@{}}
@@ -127,7 +127,7 @@ The weekly Scoring Population -- the pool from which marketing would select its 
 
 The monthly churn rate ranges from 34.8\% (Sep 2011) to 62.7\% (Dec 2010) and is noticeably higher for snapshots taken in winter (Nov--Feb), whose 90-day windows fall in the post-Christmas low season -- the seasonality of Section~\ref{sec:4-3} carried into the label.
 
-\section{Feature Engineering}
+\section{Feature Engineering, Customer Value and RFM Segments}
 \label{sec:5-5}
 
 Generate historical features using information available up to the snapshot date only, via a single backward as-of-merge primitive applied to cumulative per-occasion statistics -- the same mechanism used for recency itself, so every feature is leakage-safe by construction (verified explicitly in Section~\ref{sec:5-6}). A representative subset of each standard churn-feature group is implemented: RFM (recency, frequency, monetary), purchase behavior (average order value), temporal behavior (tenure, mean inter-purchase gap, recency relative to that gap, activity in the last 90 days), product behavior (distinct products so far) and cancellation behavior (cancellation count and value share so far).
@@ -183,10 +183,66 @@ Generate historical features using information available up to the snapshot date
 
 The top deciles churn far less than the bottom ones -- a clear univariate signal for frequency and monetary features. The frequency curve is not monotonic in its lower deciles because many rows tie at one or two purchases so far. These point-in-time gaps are narrower than an end-of-data view would suggest, since that view would let customers' future purchases inflate their frequency and monetary values.
 
+\textbf{Customer value V.} The value proxy used for revenue at risk and expected margin is the average order value so far, \emph{winsorized} at its 99th percentile on the train-period active rows (61,415 rows), because wholesale-sized customers dominate raw values (Section~\ref{sec:4-7}):
+\begin{equation*}
+    V_i = \min\big(\text{AOV}_i \text{ so far},\ \pounds1{,}956.84\big)
+\end{equation*}
+The cap affects 0.97\% of rows and keeps 95.2\% of the total uncapped value. Because both the cap and the rows it is fitted on come from the training period, the same rule can be applied unchanged to validation, test and scoring weeks.
+
+\textbf{RFM segmentation.} Recency, frequency and monetary value are scored 1--5 using quintile cut-offs fitted on the same train-period rows (recency reversed, so 5 = most recent; values tied at a cut-off stay in the lower bin):
+
+\begin{center}
+\begin{tabular}{@{}p{3.6cm}p{8cm}@{}}
+    \toprule
+    Score input & Train-period cut-offs (20/40/60/80th percentile) \\
+    \midrule
+    Recency (days) & 12.7, 28.0, 51.9, 86.8 \\
+    Frequency so far & 1, 2, 3, 5 \\
+    Monetary so far (GBP) & 279.6, 572.0, 1,035.7, 2,035.6 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+The R score and the combined score $FM = \text{round}\big((F + M)/2\big)$ are then mapped to six named segments on a grid that covers every combination:
+
+\begin{center}
+\begin{tabular}{@{}p{2.6cm}p{1.6cm}p{1.6cm}p{7.2cm}@{}}
+    \toprule
+    Segment & R & FM & Reading \\
+    \midrule
+    Champions & 4--5 & 4--5 & Recent, frequent, high spend \\
+    Loyal & 3 & 4--5 & Strong history, slightly less recent \\
+    Potential & 3--5 & 1--3 & Recent but little history yet \\
+    Can't Lose & 1--2 & 5 & Best customers going quiet \\
+    At Risk & 1--2 & 3--4 & Good customers going quiet \\
+    Hibernating & 1--2 & 1--2 & Lapsing, low value \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+On the 172,561 labeled rows:
+
+\begin{center}
+\begin{tabular}{@{}p{2.6cm}p{1.8cm}p{1.8cm}p{1.8cm}p{2.2cm}p{2.2cm}@{}}
+    \toprule
+    Segment & Share of rows & Customers & Churn rate & Mean V (GBP) & Share of V \\
+    \midrule
+    Champions & 23.9\% & 2,308 & 23.3\% & 443.8 & 28.4\% \\
+    Loyal & 10.9\% & 2,218 & 31.0\% & 427.3 & 12.5\% \\
+    Potential & 21.2\% & 3,976 & 60.6\% & 304.9 & 17.3\% \\
+    Can't Lose & 9.5\% & 1,282 & 35.6\% & 457.2 & 11.7\% \\
+    At Risk & 16.9\% & 2,327 & 57.8\% & 396.9 & 18.0\% \\
+    Hibernating & 17.6\% & 2,912 & 74.1\% & 254.5 & 12.0\% \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Churn rises from 23.3\% for Champions to 74.1\% for Hibernating customers, so the segments carry the expected risk ordering. Two segments stand out for retention. \textbf{At Risk} combines high churn (57.8\%) with above-average value, the classic offer target. \textbf{Can't Lose} customers have the highest mean value (\pounds457) but a churn rate of only 35.6\% -- many of them are slow but steady buyers, so offering them a discount would often cannibalize margin. \textbf{Potential} customers churn almost as often as At Risk ones (60.6\%) because they are mostly new, with little history yet. These segments define the RFM-segment targeting baseline (target At Risk and Can't Lose) used in Chapter~\ref{ch:evaluation}, and the \texttt{rfm\_segment} column of the score table. Customer counts overlap across segments because a customer moves between segments over the weekly snapshots.
+
 \section{Leakage Prevention and Temporal Split}
 \label{sec:5-6}
 
-\textbf{Leakage prevention.} No future information may be used in feature construction; the prediction window is reserved for label construction. A direct check re-derives one feature (\texttt{frequency\_so\_far}) for every base row and asserts its source timestamp never exceeds the row's snapshot date; this passes for all 208,764 rows, confirming the as-of-merge construction is leakage-safe by result, not only by design. Aggregates that depend on the whole dataset (scalers, encoders, imputation values, percentile thresholds) are fitted on the training period only, once modeling starts in Chapter~\ref{ch:modeling}.
+\textbf{Leakage prevention.} No future information may be used in feature construction; the prediction window is reserved for label construction. A direct check re-derives one feature (\texttt{frequency\_so\_far}) for every base row and asserts its source timestamp never exceeds the row's snapshot date; this passes for all 208,764 rows, confirming the as-of-merge construction is leakage-safe by result, not only by design. Aggregates that depend on the whole dataset are fitted on the training period only: the RFM quintile cut-offs and the V cap here (Section~\ref{sec:5-5}), and scalers and imputation values once modeling starts in Chapter~\ref{ch:modeling}.
 
 \textbf{Caveat.} $R_{\max}$ and $H$ themselves were chosen from inter-purchase gaps measured over the \emph{full} dataset in Chapter~\ref{ch:data-understanding}, not the training period alone. A stricter pipeline would re-derive these thresholds from training-period data only; here they are treated as fixed configuration, consistent with their role as project-level design choices rather than learned parameters.
 
@@ -284,7 +340,7 @@ A longer horizon both removes labelable weeks at the end of the data and lengthe
 \section{Conclusion}
 \label{sec:5-7}
 
-The final modeling table has one row per \textbf{Customer $\times$ Snapshot Date}, with the customer ID, snapshot date, a segment flag (one-time / repeat, based on frequency so far), the population flags (\texttt{in\_training\_sample}, \texttt{in\_scoring\_population}), the sample weight, the 11 historical features, the churn label and the split assignment -- produced by reproducible transformations from a single configuration. It has \textbf{208,764 rows and 20 columns}: 164,794 rows (79.0\%) are \texttt{repeat}-segment and 43,970 (21.0\%) are \texttt{one-time}-segment at their respective snapshot dates. The table is saved to \texttt{data/processed/}\allowbreak\texttt{modeling\_dataset\_h90.parquet} ($\approx$6.5\,MB) for direct reuse in Chapter~\ref{ch:modeling}.
+The final modeling table has one row per \textbf{Customer $\times$ Snapshot Date}, with the customer ID, snapshot date, a segment flag (one-time / repeat, based on frequency so far), the population flags (\texttt{in\_training\_sample}, \texttt{in\_scoring\_population}), the sample weight, the 11 historical features, the capped value V, the R/F/M scores and RFM segment, the churn label and the split assignment -- produced by reproducible transformations from a single configuration. It has \textbf{208,764 rows and 25 columns}: 164,794 rows (79.0\%) are \texttt{repeat}-segment and 43,970 (21.0\%) are \texttt{one-time}-segment at their respective snapshot dates. The table is saved to \texttt{data/processed/}\allowbreak\texttt{modeling\_dataset\_h90.parquet} ($\approx$7.7\,MB) for direct reuse in Chapter~\ref{ch:modeling}.
 
 \begin{center}
 \begin{tabular}{@{}p{3.4cm}p{10.7cm}@{}}
@@ -295,6 +351,7 @@ The final modeling table has one row per \textbf{Customer $\times$ Snapshot Date
     Population & 208,764 weekly active rows of 5,725 customers over 79 weeks; 20,152 episode rows flagged for training \\
     Label & 172,561 labelable rows (82.7\%), churn rate 48.0\% -- close to balanced and seasonal \\
     Features & 11 point-in-time features in five groups; RFM and activity separate churners most clearly \\
+    Value and segments & V capped at \pounds1,956.84 (P99, train); six RFM segments with churn from 23.3\% (Champions) to 74.1\% (Hibernating) \\
     Split & Train 6,453 episode rows (46.7\% churn); validation 21,514 rows (52.9\%); test 24,252 rows (40.1\%); final refit 12,019 episode rows \\
     \bottomrule
 \end{tabular}
