@@ -1,0 +1,9 @@
+fontspec
+geometry
+microtype
+xcolor
+hyperref
+graphics
+booktabs
+tools
+fancyhdr
