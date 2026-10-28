@@ -12,7 +12,7 @@ Priority: **P1** required by the course · **P2** core of the strategy · **P3**
 
 ## P1 — Required by the course
 
-- [ ] **`feat/value-and-rfm-segments`** — value proxy V and RFM segmentation (Strategy 4.7, 5.5)
+- [x] **`feat/value-and-rfm-segments`** — value proxy V and RFM segmentation (Strategy 4.7, 5.5)
   - Value concentration in notebook 06: revenue share of the top 1% / 10% of customers
   - `value_v` = average order value so far, winsorized at P99 fitted on the training period
   - RFM quintiles fitted on the training period, mapped to named segments (Champions, Loyal, Potential, At Risk, Can't Lose, Hibernating); per-segment count, revenue share, churn rate, average V
