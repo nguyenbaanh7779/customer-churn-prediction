@@ -6,14 +6,16 @@ Customer churn prediction and retention marketing targeting analysis using the U
 
 This project builds a system to predict whether an existing customer is likely to become inactive within a defined future period, so that a marketing team can prioritize retention spend on the customers most at risk of churning. Three targeting strategies are compared: a random/no-model baseline, a rule-based RFM approach, and a machine-learning model trained on customer purchase history.
 
-The full write-up — business understanding, data preparation, modeling, and evaluation — lives in [`latex/`](latex/) as a LaTeX report (`latex/main.tex`).
+The full write-up — business understanding, data preparation, modeling, and evaluation — lives in [`report/`](report/) as a LaTeX report (`report/main.tex`). A 2-page executive summary is in [`brief/`](brief/), and a slide deck is in [`slide/`](slide/).
 
 ## Repository Structure
 
 ```
 data/raw/    Raw UCI Online Retail II transaction data (online_retail_II.xlsx)
 notebooks/   Exploratory analysis and modeling notebooks
-latex/       LaTeX source for the project report
+report/      LaTeX source for the full project report
+brief/       LaTeX source for the 2-page executive brief
+slide/       LaTeX (Beamer) source for the presentation deck
 docs/guide/  Setup and usage guides
 ```
 

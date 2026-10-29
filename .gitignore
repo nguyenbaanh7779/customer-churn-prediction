@@ -223,21 +223,21 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# LaTeX build artifacts
-latex/**/*.aux
-latex/**/*.out
-latex/**/*.toc
-latex/**/*.lof
-latex/**/*.lot
-latex/**/*.bbl
-latex/**/*.blg
-latex/**/*.fls
-latex/**/*.fdb_latexmk
-latex/**/*.synctex.gz
-latex/**/*.nav
-latex/**/*.snm
-latex/**/*.vrb
-latex/**/*.pdf
+# LaTeX build artifacts (report/, brief/, slide/)
+*.aux
+*.out
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.pdf
 
 /data
 /models

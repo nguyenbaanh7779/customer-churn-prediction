@@ -12,9 +12,14 @@ pip install -r requirements.txt
 
 Raw data is expected under `data/raw/` (already present in this repo checkout, and gitignored so it isn't re-committed).
 
-## LaTeX Report
+## LaTeX Deliverables (report/, brief/, slide/)
 
-The report source is [`latex/main.tex`](../../latex/main.tex), split into per-section files under `latex/content/`. It must be compiled with **XeLaTeX**, not plain `pdflatex` — the cover page includes Vietnamese names with diacritics that only render correctly through XeLaTeX's `fontspec`-based font handling.
+There are three LaTeX deliverables, each compiled the same way:
+- [`report/main.tex`](../../report/main.tex) — the full report, split into per-section files under `report/content/`.
+- [`brief/main.tex`](../../brief/main.tex) — a 2-page executive brief.
+- [`slide/main.tex`](../../slide/main.tex) — the presentation deck (Beamer).
+
+All three must be compiled with **XeLaTeX**, not plain `pdflatex` — the cover/title pages include Vietnamese names with diacritics that only render correctly through XeLaTeX's `fontspec`-based font handling.
 
 ### 1. Install a TeX distribution
 
@@ -32,21 +37,21 @@ After installing, open a **new** terminal (or restart VS Code) so the TeX binari
 export PATH="/Library/TeX/texbin:$PATH"
 ```
 
-Then install the packages this report depends on, listed in [`latex/requirements.txt`](../../latex/requirements.txt):
+Then install the packages each deliverable depends on, listed in its own `requirements.txt` (e.g. [`report/requirements.txt`](../../report/requirements.txt)):
 
 ```bash
-sudo tlmgr install $(cat latex/requirements.txt)
+sudo tlmgr install $(cat report/requirements.txt)
 ```
 
 ### 2. Compile from the command line
 
 ```bash
-cd latex
+cd report
 xelatex main.tex
 xelatex main.tex   # run a second time so the table of contents is correct
 ```
 
-This produces `latex/main.pdf`. If XeLaTeX reports a missing `.sty` file (BasicTeX ships a minimal package set), install it with:
+This produces `report/main.pdf`. Swap `report` for `brief` or `slide` to build those instead. If XeLaTeX reports a missing `.sty` file (BasicTeX ships a minimal package set), install it with:
 
 ```bash
 sudo tlmgr install <package-name>
@@ -83,7 +88,7 @@ If you use the **LaTeX Workshop** extension, it defaults to building with `latex
 
 The `command` path above is where `brew install --cask basictex` puts binaries on macOS. On Linux/Windows, replace it with wherever your TeX Live install put `xelatex` (or just `"xelatex"` if it's already on your `PATH`).
 
-To build: open `latex/main.tex`, click into that editor tab so it's the active document, then run the build command (▶ button in the top-right, or `Cmd+Option+B`).
+To build: open `report/main.tex` (or `brief/main.tex` / `slide/main.tex`), click into that editor tab so it's the active document, then run the build command (▶ button in the top-right, or `Cmd+Option+B`).
 
 ### Troubleshooting
 

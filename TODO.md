@@ -9,6 +9,7 @@ Priority: **P1** required by the course · **P2** core of the strategy · **P3**
 - [x] MVP pipeline: Data Understanding → Evaluation, scoring output and model export (#2)
 - [x] Data Preparation chapter restructured into 7 sections (#6)
 - [x] `activity_last_90d` computed by key instead of row position (#7)
+- [x] `latex/` renamed to `report/`; added `brief/` (2-page executive brief) and `slide/` (10-minute presentation deck) as separate top-level LaTeX deliverables
 
 ## P1 — Required by the course
 
@@ -30,7 +31,7 @@ Priority: **P1** required by the course · **P2** core of the strategy · **P3**
   - `README.md`: setup, run order of notebooks 06 → 09, outputs of each step
   - `docs/data_dictionary.md` + source log (URL, download date, license, filters, joins, cleaning log)
   - `docs/model_card.md` (one page)
-  - `docs/executive_brief.md` (max 2 pages, written for a manager)
+  - Executive brief: done separately as `brief/main.tex` (not `docs/executive_brief.md`)
   - Done when: a third party can rerun the pipeline from the README
 
 - [ ] **`feat/dashboard`** — 3–5 KPIs and one actionable view (Strategy 8.5); built from scratch
