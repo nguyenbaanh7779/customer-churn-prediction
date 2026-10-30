@@ -18,17 +18,17 @@ $\rightarrow$ \textbf{Snapshots} $\rightarrow$ \textbf{Features} $\rightarrow$ \
 \section{Customer Risk Output}
 \label{sec:8-3}
 
-Minimum output: \texttt{customer\_id}, \texttt{snapshot\_date}, \texttt{churn\_probability}, \texttt{risk\_band}, \texttt{rank}, \texttt{segment}, \texttt{model\_version}.
+Minimum output: \texttt{customer\_id}, \texttt{snapshot\_date}, \texttt{churn\_probability}, \texttt{churn\_probability\_calibrated} (prior-corrected, Section~\ref{sec:7-2}), \texttt{expected\_loss} (calibrated probability $\times$ $V$ $\times$ expected orders in $H$, Section~\ref{sec:7-sens}), \texttt{risk\_score}, \texttt{risk\_band}, \texttt{rank}, \texttt{segment}, \texttt{model\_version}.
 
 \section{Target Population}
 \label{sec:8-4}
 
-Select target customers based on churn risk, marketing capacity and business constraints.
+Select target customers based on churn risk, customer value, marketing capacity and business constraints. The recommended ranking key is \texttt{expected\_loss}, not \texttt{churn\_probability}: under a realistic, suppressed campaign with a small weekly budget, ranking by expected loss preserves the most net value of every candidate evaluated, while ranking by churn probability alone does worse than the recency rule (Section~\ref{sec:7-10}). The weekly budget should stay small relative to the active base -- with a 13-week suppression, a 10\% weekly share contacts most customers within a quarter, after which the choice of ranking barely matters.
 
 \section{Suppression}
 \label{sec:8-5}
 
-Customers \textbf{contacted} in a campaign are excluded from the Scoring Population for a configurable suppression period $S$ (e.g.\ 4--8 weeks), so they are not targeted repeatedly. Suppression:
+Customers \textbf{contacted} in a campaign are excluded from the Scoring Population for a configurable suppression period $S$, so they are not targeted repeatedly. The evaluation uses $S = 13$ weeks ($\approx H$, one contact per churn window; Section~\ref{sec:7-sens}); shorter periods (e.g.\ 4--8 weeks) allow follow-up contacts within the same churn window. Suppression:
 
 \begin{itemize}
     \item applies only to customers who were actually targeted, not to everyone who was scored;
