@@ -10,7 +10,7 @@ Turn the cleaned transactions into a leakage-safe modeling dataset of \textbf{Cu
     \midrule
     Prediction horizon $H$ & 90 days & Repurchase coverage and training-data trade-off (Section~\ref{sec:4-5}) \\
     Activity threshold $R_{\max}$ & 136 days & P90 of the inter-purchase gap (Section~\ref{sec:4-5}) \\
-    Episode cooldown $C$ & 90 days ($= H$) & Non-overlapping label windows for training \\
+    Episode cooldown $C$ & 90 days ($= H$) & Non-overlapping label windows for the episode-sampled comparison scheme \\
     Warm-up & 6 months & Minimum history before the first snapshot \\
     Snapshot frequency & Weekly (Mondays) & Matches a weekly Top-K marketing cycle \\
     \bottomrule
@@ -64,19 +64,25 @@ Customers beyond $R_{\max}$ leave the base and re-enter if they purchase again. 
     Flag & Rule \\
     \midrule
     \texttt{in\_scoring\_population} & Row is active and the customer is not under suppression at $t$. The historical data contain no real campaigns, so suppression is empty and every active row is in the \textbf{Scoring Population} (see Section~\ref{sec:7-1}). Used for validation, test and weekly scoring. \\
-    \texttt{in\_training\_sample} & Row selected by the eligibility-episode rule below; the \textbf{Training Population}. \\
-    \texttt{sample\_weight} & $1 /$ (number of weekly active rows of the customer in the training period); filled in once the training period is known (Section~\ref{sec:5-6}) and used only by the ablation scheme (Section~\ref{sec:6-10}). \\
+    \texttt{in\_training\_sample} & Row selected by the eligibility-episode rule below; the episode-sampled training scheme, kept for comparison (Section~\ref{sec:6-scheme}). \\
+    \texttt{sample\_weight} & $1 /$ (number of weekly active rows of the customer in the training period); filled in once the training period is known (Section~\ref{sec:5-6}). With every active row of the training period, this is the \textbf{Training Population} of the final model (Section~\ref{sec:6-scheme}). \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-\textbf{Training sample: the eligibility-episode rule.} Consecutive weekly snapshots of the same customer differ only slightly (mostly recency grows by 7 days) and their 90-day label windows overlap, so their labels are strongly correlated; long-history customers would also dominate training. The Training Population is therefore sampled per customer, in date order:
+\textbf{Two training schemes.} Consecutive weekly snapshots of the same customer differ only slightly (mostly recency grows by 7 days) and their 90-day label windows overlap, so their labels are strongly correlated; long-history customers would also dominate an unweighted fit. Two ways to handle this are built here and compared in Section~\ref{sec:6-scheme}:
+\begin{itemize}
+    \item \textbf{All weekly rows, weighted} (the final Training Population): keep every active row of the training period and give each row the weight $1/n_i$, where $n_i$ is the customer's number of rows, so every customer carries the same total weight.
+    \item \textbf{Episode-sampled} (comparison scheme): subsample rows with the eligibility-episode rule below.
+\end{itemize}
+
+\textbf{The eligibility-episode rule.} Rows are sampled per customer, in date order:
 \begin{itemize}
     \item a training row is taken at the first weekly date $t$ at which the customer is active;
     \item the customer then contributes no further training row for a cooldown of $C = H = 90$ days -- the next one is the first weekly date $\geq t + C$ at which they are still active;
     \item a customer who exceeds $R_{\max}$ leaves the active base and, if they purchase again, starts a new episode.
 \end{itemize}
-Each customer's training labels then have non-overlapping prediction windows, and every customer contributes a similar number of rows. The rule is applied \textbf{only to training}; validation, test and scoring keep every active row. As an alternative scheme, all active rows can be used with the per-customer weight $1/n_i$ (\texttt{sample\_weight}), compared in Section~\ref{sec:6-10}.
+Each customer's training labels then have non-overlapping prediction windows, and every customer contributes a similar number of rows. Both schemes concern \textbf{training only}; validation, test and scoring keep every active row. On this dataset's size, the weighted scheme wins on validation (Section~\ref{sec:6-scheme}): discarding over 90\% of the rows removes more signal than redundancy.
 
 \textbf{Result.} The base table has \textbf{208,764 weekly active rows of 5,725 customers}. A direct check confirms every \texttt{in\_training\_sample} row is also an \texttt{in\_scoring\_population} row -- the episode rule only subsets the active base, never adds to it:
 
@@ -86,12 +92,12 @@ Each customer's training labels then have non-overlapping prediction windows, an
     Population & Rows & Customers & Rows per customer \\
     \midrule
     Weekly, all active (Scoring Population) & 208,764 & 5,725 & 36.5 \\
-    Weekly, episode cooldown ($C = 90$) (Training Population) & 20,152 & 5,725 & 3.5 \\
+    Weekly, episode cooldown ($C = 90$) (comparison scheme) & 20,152 & 5,725 & 3.5 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-The episode rule cuts the weekly rows by more than 90\% for training (from 36.5 to 3.5 rows per customer) while keeping every customer.
+The episode rule would cut the weekly rows by more than 90\% (from 36.5 to 3.5 rows per customer) while keeping every customer; the weighted scheme instead keeps every row and rebalances customers through the weights.
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch7_weekly_scoring_population.png}
@@ -119,7 +125,7 @@ The weekly Scoring Population -- the pool from which marketing would select its 
 
 \textbf{Result.} At $H = 90$ days, \textbf{172,561 of the 208,764 base rows (82.7\%) are labelable}, and the churn rate on those rows is \textbf{48.0\%}. Churn is therefore close to a majority class here, not a rare event, which changes how PR-AUC and Precision should be read (Chapter~\ref{ch:evaluation}). It is close to one half even though 82.8\% of repurchases happen within 90 days, because that share is dominated by frequent buyers: per customer, 40\% of repeat customers buy more slowly than every 90 days and one-time customers have no repurchase at all (Section~\ref{sec:4-6}).
 
-\textbf{Label EDA.} The episode-sampled training rows have a churn rate of 49.5\%, close to the 48.0\% of the full Scoring Population -- the subsampling does not materially bias the label distribution.
+\textbf{Label EDA.} The episode-sampled rows have a churn rate of 49.5\%, close to the 48.0\% of the full Scoring Population. Per-customer weighting shifts the effective rate more: in the train period, the unweighted churn rate is 43.0\% but the $1/n_i$-weighted rate is 53.5\%, because customers with few active weeks -- often one-time buyers about to lapse -- count as much as long-standing ones. This leaves the ranking unaffected but raises the model's average predicted probability (Section~\ref{sec:7-2}).
 
 \begin{center}
 \includegraphics[width=0.85\textwidth]{figures/ch7_churn_rate_by_month.png}
@@ -302,24 +308,24 @@ Validation and test therefore measure performance exactly as the model would be 
 \end{tabular}
 \end{center}
 
-\texttt{sample\_weight} is now computed for the 61,415 train-period active rows as $1 /$ (that customer's row count within the train period): it ranges from 0.0417 (a customer active in all 24 train weeks) to 1.0 (a customer active in only one), with a mean of 0.0636 -- confirming the weighting scheme gives every customer roughly equal total weight regardless of how many weekly rows they contributed, as intended for the ablation comparison in Section~\ref{sec:6-10}.
+\texttt{sample\_weight} is now computed for the 61,415 train-period active rows as $1 /$ (that customer's row count within the train period): it ranges from 0.0417 (a customer active in all 24 train weeks) to 1.0 (a customer active in only one), with a mean of 0.0636 -- confirming every customer gets equal total weight regardless of how many weekly rows they contributed (Section~\ref{sec:6-scheme}).
 
-\textbf{Rows used per split.} The table above counts all active rows. Training fits only on the episode-sampled rows of the train period, while validation and test keep every active row -- because that is how the model is used, ranking all active customers each week:
+\textbf{Rows used per split.} Training fits on every active row of the train period with the per-customer weight (the episode-sampled rows are used only for the comparison in Section~\ref{sec:6-scheme}); validation and test keep every active row, unweighted -- because that is how the model is used, ranking all active customers each week:
 
 \begin{center}
 \begin{tabular}{@{}p{3.4cm}p{2.6cm}p{4.2cm}p{2.3cm}@{}}
     \toprule
     Split & Active rows & Rows used & Churn rate (rows used) \\
     \midrule
-    Train & 61,415 & 6,453 episode rows (3,905 customers) & 46.7\% \\
+    Train & 61,415 & 61,415 weighted (3,905 customers) & 43.0\% (53.5\% weighted) \\
     Validation & 21,514 & 21,514 (all active) & 52.9\% \\
     Test & 24,252 & 24,252 (all active) & 40.1\% \\
-    Final refit (train start -- validation end) & -- & 12,019 episode rows (4,571 customers) & 51.3\% \\
+    Final refit (train start -- validation end) & -- & 120,376 weighted (4,571 customers) & 50.0\% (62.0\% weighted) \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-For the final model, the episode rule is re-applied over the whole window from the first training date to the last validation date (Section~\ref{sec:6-7}); because the cooldown restarts over a longer window, the refit sample is nearly twice the size of the original training sample.
+For the final model, every labelable active row from the first training date to the last validation date is used, with $1/n_i$ recomputed over that longer window (Section~\ref{sec:6-7}) -- about twice the training rows. For comparison, the episode-sampled scheme over the same window has 12,019 rows (51.3\% churn).
 
 \textbf{Feasibility of $H$.} Applying the same allocation (8 validation and 10 test weeks, embargo of $H$ days before each) to each candidate horizon's labelable weekly dates:
 
@@ -348,11 +354,11 @@ The final modeling table has one row per \textbf{Customer $\times$ Snapshot Date
     Step & Result \\
     \midrule
     Cleaning & 776,577 of 1,067,371 rows valid (72.8\%) $\rightarrow$ 36,594 purchase occasions of 5,852 customers \\
-    Population & 208,764 weekly active rows of 5,725 customers over 79 weeks; 20,152 episode rows flagged for training \\
+    Population & 208,764 weekly active rows of 5,725 customers over 79 weeks; every active row trains with a per-customer weight $1/n_i$, and 20,152 episode rows are flagged for the comparison scheme \\
     Label & 172,561 labelable rows (82.7\%), churn rate 48.0\% -- close to balanced and seasonal \\
     Features & 11 point-in-time features in five groups; RFM and activity separate churners most clearly \\
     Value and segments & V capped at \pounds1,956.84 (P99, train); six RFM segments with churn from 23.3\% (Champions) to 74.1\% (Hibernating) \\
-    Split & Train 6,453 episode rows (46.7\% churn); validation 21,514 rows (52.9\%); test 24,252 rows (40.1\%); final refit 12,019 episode rows \\
+    Split & Train 61,415 weighted rows (43.0\% churn); validation 21,514 rows (52.9\%); test 24,252 rows (40.1\%); final refit 120,376 weighted rows \\
     \bottomrule
 \end{tabular}
 \end{center}

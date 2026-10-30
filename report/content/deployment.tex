@@ -8,7 +8,7 @@ Provide recurring churn scoring that produces a prioritized existing-customer po
 \section{Weekly Batch Pipeline}
 \label{sec:8-2}
 
-The training-episode cooldown is \textbf{not} part of this pipeline; it exists only in training-data construction.
+Per-customer training weights ($1/n_i$) are \textbf{not} part of this pipeline; they exist only in training-data construction. Every active customer is scored every week.
 
 \begin{center}
 \textbf{Latest transactions} $\rightarrow$ \textbf{Valid transactions} $\rightarrow$ \textbf{Active customers} (Recency $\leq R_{\max}$) $\rightarrow$ \textbf{Remove suppressed customers} \\[0.3cm]
@@ -32,7 +32,7 @@ Customers \textbf{contacted} in a campaign are excluded from the Scoring Populat
 
 \begin{itemize}
     \item applies only to customers who were actually targeted, not to everyone who was scored;
-    \item is an operational business rule, independent of the training-episode cooldown $C$;
+    \item is an operational business rule, independent of how training rows are sampled or weighted;
     \item is logged, so that suppressed customers can be analyzed separately once campaign data exist.
 \end{itemize}
 
