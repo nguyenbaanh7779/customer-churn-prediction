@@ -46,7 +46,7 @@ Retaining an existing customer costs far less than acquiring a new one, and reve
 \end{center}
 
 \section{What We Built}
-A weekly churn early-warning score for every active customer, built on point-in-time RFM and purchase-behavior features and a Logistic Regression classifier. On a held-out 10-week test period (2,907 customers, 40.1\% churned), the model reaches \textbf{ROC-AUC 0.765} and \textbf{PR-AUC 0.658} -- clearly separating customers likely to lapse within 90 days from those who will return, and leading every rule-based baseline on ranking quality (Precision@10\% $0.760\pm0.050$, Lift@10\% $1.902\pm0.055$) in every one of the 10 test weeks.
+A weekly churn early-warning score for every active customer, built on point-in-time RFM and purchase-behavior features and a Logistic Regression classifier. On a held-out 10-week test period (2,907 customers, 40.1\% churned), the model reaches \textbf{ROC-AUC 0.759} and \textbf{PR-AUC 0.654} -- clearly separating customers likely to lapse within 90 days from those who will return, and leading every rule-based baseline on ranking quality (Precision@10\% $0.754\pm0.043$, Lift@10\% $1.888\pm0.061$) in every one of the 10 test weeks.
 
 \section{Key Finding: Risk Is Not the Same as Value}
 Despite leading every predictive and ranking metric, the model is \textbf{not} the most profitable targeting rule at the standard 10\% operating point. Comparing estimated net business impact of contacting the top 10\% of customers each week (40\% offer response rate, 35\% margin, \pounds0.50 contact cost, \pounds5.00 incentive cost):
@@ -56,8 +56,8 @@ Despite leading every predictive and ranking metric, the model is \textbf{not} t
     \toprule
     Targeting rule & Churners caught & Net business impact \\
     \midrule
-    \textbf{Churn model} & \textbf{1,846} & \textbf{\pounds42,388} \\
-    RFM score (hand-built) & 1,743 & \pounds64,345 \\
+    \textbf{Churn model} & \textbf{1,831} & \textbf{\pounds51,506} \\
+    RFM score (hand-built) & 1,732 & \pounds64,616 \\
     Longest time since last purchase & 1,521 & \textbf{\pounds70,214} \\
     Random & 986 & \pounds41,626 \\
     \bottomrule

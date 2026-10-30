@@ -166,9 +166,9 @@
     \column{.33\textwidth}
     \card{1}{Weekly snapshots}{One row per customer per Monday, only for customers active and not yet lost (recency $\leq$ 136 days).}
     \column{.33\textwidth}
-    \card{2}{11 point-in-time features}{RFM, purchase behavior, temporal behavior, product variety, cancellations -- all leakage-safe by construction.}
+    \card{2}{8 point-in-time features}{RFM, order value, tenure, purchase rhythm and recent activity -- all leakage-safe by construction.}
     \column{.33\textwidth}
-    \card{3}{Final model}{Logistic Regression, $C{=}0.01$, full feature set -- chosen over Random Forest and XGBoost after tuning.}
+    \card{3}{Final model}{Logistic Regression, $C{=}0.01$, trained on every weekly snapshot with per-customer weights -- each choice made on validation.}
   \end{columns}
 \end{frame}
 
@@ -178,10 +178,10 @@
 \begin{frame}{Model Results}
   \begin{columns}[t]
     \column{.5\textwidth}
-    \stattile{0.765}{ROC-AUC (test)}\quad
-    \stattile{0.658}{PR-AUC (test)}\\[0.15cm]
-    \stattile{1.90}{Lift@10\% (weekly mean)}\quad
-    \stattile{0.76}{Precision@10\%}
+    \stattile{0.759}{ROC-AUC (test)}\quad
+    \stattile{0.654}{PR-AUC (test)}\\[0.15cm]
+    \stattile{1.89}{Lift@10\% (weekly mean)}\quad
+    \stattile{0.75}{Precision@10\%}
 
     \vspace{0.15cm}
     {\scriptsize\color{inkgray} Leads every baseline in all 10 test weeks, with low week-to-week variance.}
@@ -202,8 +202,8 @@
     \toprule
     Candidate & Churners caught & Net business impact \\
     \midrule
-    \textbf{Churn model} & \textbf{1,846} & \pounds42,388 \\
-    RFM rule (hand-built) & 1,743 & \pounds64,345 \\
+    \textbf{Churn model} & \textbf{1,831} & \pounds51,506 \\
+    RFM rule (hand-built) & 1,732 & \pounds64,616 \\
     Recency rule & 1,521 & \textbf{\pounds70,214} \\
     Random & 986 & \pounds41,626 \\
     \bottomrule
