@@ -1,86 +1,90 @@
-\documentclass[a4paper,10.5pt]{article}
-
-% ---- Page layout ----
-\usepackage[margin=2.2cm]{geometry}
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{0.5em}
-
-% ---- Fonts (XeLaTeX; needed for correct Vietnamese diacritics) ----
+\documentclass[a4paper,10pt]{article}
+\usepackage[margin=1.8cm,footskip=0.8cm]{geometry}
 \usepackage{fontspec}
-
-% ---- Typography & links ----
+\setmainfont{TeX Gyre Heros}
 \usepackage{microtype}
-\usepackage{xcolor}
-\usepackage{hyperref}
-\hypersetup{colorlinks = true, linkcolor = blue!50!black, urlcolor = blue!50!black}
-
-% ---- Figures & tables ----
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{array}
-
-% ---- Header / footer ----
-\usepackage{fancyhdr}
-\pagestyle{fancy}
-\fancyhf{}
-\rfoot{\thepage}
+\usepackage{graphicx,booktabs,array,tabularx,titlesec,fancyhdr,xcolor}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\definecolor{navy}{HTML}{172B45}
+\definecolor{muted}{HTML}{536171}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\titleformat{\section}{\fontsize{11.5}{14}\selectfont\bfseries\color{navy}}{}{0pt}{}
+\titlespacing*{\section}{0pt}{0.8em}{0.3em}
+\pagestyle{fancy}\fancyhf{}
+\fancyfoot[L]{\footnotesize\color{muted} Business Data Analytics\enspace |\enspace Executive brief}
+\fancyfoot[R]{\footnotesize\color{muted}\thepage\ / 2}
 \renewcommand{\headrulewidth}{0pt}
-
+\renewcommand{\footrulewidth}{0.3pt}
+\setlength{\emergencystretch}{2em}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \begin{document}
+\fontsize{10.2}{12.8}\selectfont
+{\fontsize{9}{11}\selectfont\color{muted}\textbf{EXECUTIVE BRIEF}\hfill 4 November 2026}\par
+\vspace{0.15cm}
+{\fontsize{25}{28}\selectfont\bfseries\color{navy}Who Gets the Discount?}\par
+\vspace{0.08cm}
+{\fontsize{12}{15}\selectfont\color{muted}Choosing which customers to offer a voucher, within a fixed weekly budget}\par
+\vspace{0.15cm}{\color{navy}\hrule}\vspace{0.12cm}
+
+\section*{The decision}
+Each week the retailer can send a 10\% discount voucher to some of its customers. A voucher only pays off for a customer who was \emph{about to stop buying} and stays because of it. For a customer who would have bought anyway, it is simply money given away. So the question is not ``who buys a lot?'' but \textbf{``who should get a voucher, given a fixed weekly discount budget?''}
+
+\section*{Our answer}
+Every Monday, a statistical model gives each active customer a score: how likely they are to make \emph{no purchase in the next 90 days}. We send the voucher to the highest-scoring customers until the weekly discount budget is used up. With a budget of about \pounds7,700 of discounts per week, that is roughly \textbf{780 customers a week}.
+
+In a simulation on 10 weeks the model had never seen (July--September 2011), this earns \textbf{\pounds8,700 of extra profit} per weekly group over the next 90 days. Picking the customers who have been silent the longest, with the same discount budget, earns \pounds5,800, so the model gives about \textbf{51\% more}. Sending the voucher to everyone costs \pounds33,000 in discounts and earns only \pounds4,400. These are simulated results, not measured sales.
+
+\section*{How we count the money (simple version)}
+We have no data on past vouchers or product costs, so the following are \textbf{assumptions}, tested in a pilot:
 
 \begin{center}
-    {\LARGE\bfseries Customer Retention \& Churn Prediction}\\[0.2cm]
-    {\large Executive Brief}\\[0.15cm]
-    {\small Business Data Analytics Project Report \textbar{} \today}
+\small\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.3cm}Y@{}}
+\toprule
+Voucher & 10\% off one order, worth the customer's usual order value $V$ \\
+Customer about to leave & 30\% of them stay and buy because of the voucher \\
+Customer who would buy anyway & 40\% of them use the voucher (we lose the 10\%) \\
+Margin and cost & 40\% gross margin on an order; \pounds0.50 to contact one customer \\
+\bottomrule
+\end{tabularx}
 \end{center}
 
-\vspace{0.3cm}
-\rule{\linewidth}{0.6pt}
-\vspace{0.1cm}
+\textbf{Example, customer with $V=$ \pounds300.} If they were about to leave: 30\% $\times$ \pounds300 $\times$ (40\% margin $-$ 10\% discount) $-$ \pounds0.50 $=$ \textbf{+\pounds26.50}. If they would have bought anyway: $-$40\% $\times$ \pounds300 $\times$ 10\% $-$ \pounds0.50 $=$ \textbf{$-$\pounds12.50}. A good list has many customers of the first kind and few of the second. ``Extra profit'' below adds these numbers up over the customers we picked, using what really happened to them in the following 90 days.
 
-\section{The Opportunity}
-Retaining an existing customer costs far less than acquiring a new one, and revenue is highly concentrated: the \textbf{top 5\% of customers generate 52\% of revenue}, and the top 10\% generate 64\%. Protecting this base from churn is where retention spend has the most leverage.
-
+\section*{Results: same discount budget, different ways to pick customers}
 \begin{center}
-\includegraphics[width=0.48\textwidth]{figures/value_concentration.png}
+\small\setlength{\tabcolsep}{5pt}\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\textwidth}{@{}Yrrr@{}}
+\toprule
+How customers are picked & \shortstack[r]{Discount\\given} & \shortstack[r]{Customers\\contacted} & \shortstack[r]{Extra profit\\in 90 days} \\
+\midrule
+\textbf{Highest model risk of leaving} & \pounds7,741 & 780 & \textbf{\pounds8,697} \\
+Best balance of risk and order size & \pounds7,732 & 485 & \pounds7,991 \\
+Silent the longest & \pounds7,727 & 638 & \pounds5,762 \\
+Random & \pounds7,671 & 561 & \pounds951 \\
+Everyone & \pounds33,029 & 2,425 & \pounds4,420 \\
+\bottomrule
+\end{tabularx}
 \end{center}
+\vspace{-0.1cm}
+{\footnotesize\color{muted}Simulated, compared with sending nothing; per weekly group, averaged over 10 weeks. Each group's profit is counted over the next 90 days, so weekly groups overlap: do not add weeks into a yearly profit.}
 
-\section{What We Built}
-A weekly churn early-warning score for every active customer, built on point-in-time RFM and purchase-behavior features and a Logistic Regression classifier. On a held-out 10-week test period (2,907 customers, 40.1\% churned), the model reaches \textbf{AUC 0.759} -- clearly separating customers likely to lapse within 90 days from those who will return, and ahead of every rule-based baseline. The 10\% of customers it scores highest churn at \textbf{75.6\%}, against 40.1\% on average, and its calibrated probabilities match observed churn closely (Brier score 0.194).
+\textbf{What this tells us.} (1) The model is what creates the value: with the same discount, it beats ``silent the longest'' in each of the 10 weeks. (2) Adding order size to the choice does not make more profit with the same discount; it reaches 38\% fewer customers for slightly less profit, so it is the lighter option when each contact is costly. (3) Voucher to everyone wastes most of the discount. In an earlier backtest over four seasons, it lost money at a 20\% discount in three of the four.
 
-\section{Key Finding: Risk Is Not the Same as Value}
-Despite being the best churn detector, the model is \textbf{not} the most profitable targeting rule at the standard 10\% operating point. Comparing estimated net business impact of contacting the top 10\% of customers each week (40\% offer response rate, 35\% margin, \pounds0.50 contact cost, \pounds5.00 incentive cost):
+\section*{Who the offers go to}
+On the list for 5 December 2011 (772 offers), the customer groups come from the RFM segmentation: \textbf{One-time recent} (346), \textbf{Developing} (230) and \textbf{Cooling} (188) get nearly all of the offers and the expected profit. \textbf{Champions and Loyal} get only 7 offers: they mostly buy anyway, and in the test weeks a voucher to a Champion lost about \pounds15 per contact, to a Loyal customer about nothing.
 
-\begin{center}
-\begin{tabular}{@{}p{3.6cm}p{2.6cm}p{3.4cm}@{}}
-    \toprule
-    Targeting rule & Churners caught & Net business impact \\
-    \midrule
-    \textbf{Churn model} & \textbf{1,831} & \textbf{\pounds51,506} \\
-    RFM score (hand-built) & 1,732 & \pounds64,616 \\
-    Longest time since last purchase & 1,521 & \textbf{\pounds70,214} \\
-    Random & 986 & \pounds41,626 \\
-    \bottomrule
-\end{tabular}
-\end{center}
+\section*{Can we trust it? What to check}
+\begin{itemize}[leftmargin=1.2em,itemsep=0.1em,topsep=0.2em]
+\item \textbf{The model is useful but not perfect.} On the 10 test weeks, the 10\% of customers it ranked most at risk left 1.9 times as often as the average customer.
+\item \textbf{Seasons.} About 61\% of customers stop buying in December--January but only 40\% in July--September, and the model does not know the calendar. Its ranking stays useful; its exact risk numbers are too low in winter and too high in summer.
+\item \textbf{One-time buyers} are 13\% of customers but 44\% of the offer list, and the model is less accurate for them. Pilot results should be reported separately for this group.
+\item \textbf{Big orders.} About 7\% of offers go to customers with average orders above \pounds1,000. Capping order value at \pounds500 lowers the profit of the ``balanced'' list by about a fifth.
+\item \textbf{All the money figures depend on the assumptions above.} If the real margin is below about 20\%, the offers do not pay back. Real product margins should replace our 40\%.
+\end{itemize}
 
-The model catches far more churners than the simple rules, yet ends up \emph{less} profitable. The reason: a customer's average order value is only weakly related to their churn risk (\pounds269 vs.\ \pounds324 median, churned vs.\ not) -- so ranking purely by churn probability does not automatically prioritize high-value customers. The simpler rules happen to catch a higher-value subset, even while catching fewer churners overall.
-
-\section{Recommendation}
-Change the targeting score from ``churn probability'' to \textbf{expected loss}: the model's (calibrated) churn probability $\times$ the customer's order value $\times$ the orders they would place in the next 90 days. We tested this on a realistic weekly campaign -- a fixed weekly budget, each customer contacted at most once every 13 weeks:
-
-\begin{center}
-\begin{tabular}{@{}lcc@{}}
-    \toprule
-    Ranking (net impact) & 2\% of customers / week & 5\% of customers / week \\
-    \midrule
-    \textbf{Expected loss} & \textbf{\pounds46,366} & \textbf{\pounds65,354} \\
-    Longest time since last purchase & \pounds20,120 & \pounds41,195 \\
-    Churn probability alone & \pounds12,782 & \pounds37,031 \\
-    \bottomrule
-\end{tabular}
-\end{center}
-
-Expected loss more than doubles net impact at a 2\% weekly budget, and stays ahead under every way of valuing a customer we tried. Keep the weekly budget small: at 10\% a week, most customers are contacted within a quarter and the ranking barely matters. Validate with a real pilot against a held-out control group before scaling: this dataset contains no past campaign data, so every pound figure here is a scenario estimate under the stated assumptions, not an observed outcome.
-
+\section*{Next step: a small pilot}
+Run the rule for 6--8 weeks and keep 20\% of the selected customers as a no-offer control group. Follow every customer for 90 days and compare purchases and profit after discounts between the two groups, separately for one-time and repeat buyers. Expand only if the offer group clearly earns more, the discount stays within budget, and the real response is close to our assumptions (30\% and 40\%).
 \end{document}
