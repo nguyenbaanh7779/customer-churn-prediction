@@ -11,12 +11,13 @@ The full write-up — business understanding, data preparation, modeling, and ev
 ## Repository Structure
 
 ```
-data/raw/    Raw UCI Online Retail II transaction data (online_retail_II.xlsx)
-notebooks/   Exploratory analysis and modeling notebooks
-report/      LaTeX source for the full project report
-brief/       LaTeX source for the 2-page executive brief
-slide/       LaTeX (Beamer) source for the presentation deck
-docs/guide/  Setup and usage guides
+data/raw/       Raw UCI Online Retail II transaction data (online_retail_II.xlsx)
+notebooks/      Exploratory analysis and modeling notebooks
+report/         LaTeX source for the full project report
+brief/          LaTeX source for the 2-page executive brief
+slide/          LaTeX (Beamer) source for the presentation deck
+docs/guide/     Setup and usage guides
+docs/insights/  Business insights, problems found and how they were handled
 ```
 
 ## Getting Started

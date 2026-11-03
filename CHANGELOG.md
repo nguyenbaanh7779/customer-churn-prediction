@@ -17,6 +17,7 @@
 - Add the capped customer value proxy `value_v` (average order value so far, winsorized at its train-period P99) and RFM segmentation (train-period quintile cut-offs mapped to Champions, Loyal, Potential, Can't Lose, At Risk and Hibernating) to `notebooks/07_data_preparation.ipynb` and Section 5.5, and a Value Concentration section (4.7) to `notebooks/06_data_understanding.ipynb` and the report ([`af9662a`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/af9662a))
 - Add `brief/main.tex`, a 2-page executive brief for a non-technical manager: the retention opportunity (top 5% of customers = 52% of revenue), the model's test performance, the counter-intuitive net business impact finding and its root cause, and the recommendation to rank by expected value with a pilot before scaling ([`d1e6d94`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/d1e6d94))
 - Add `slide/main.tex`, a 10-frame Beamer deck for a 10-minute talk (business problem, revenue concentration, approach, model results, net business impact finding and root cause, recommendation, summary) ([`d1e6d94`](https://github.com/nguyenbaanh7779/customer-repurchase-prediction-olist/commit/d1e6d94))
+- Add `docs/insights/README.md`, recording the two business insights (low-value churners behind the model's weak business impact; revenue concentrated in the top 5% of customers), the measurement problems they exposed, how each was handled, and the open items
 
 ### Updates
 
