@@ -43,9 +43,9 @@ Success is defined \textbf{relative to simple alternatives} rather than by arbit
     \toprule
     Level & Criterion (evaluated on the unseen test period) \\
     \midrule
-    Predictive & Final model PR-AUC exceeds the test-period churn rate (random reference) and the recency-rule baseline. \\
-    Targeting & Final model Lift@K and Recall@K at the chosen operating $K$ (e.g.\ 20--30\%) exceed the recency-rule baseline, averaged over weekly scoring dates. \\
-    Stability & Top-K performance does not collapse on individual test weeks (report mean $\pm$ standard deviation). \\
+    Predictive & Final model AUC exceeds random targeting and the recency-rule baseline. \\
+    Targeting & Final model Recall@K at the chosen operating $K$ exceeds the recency-rule baseline over the weekly scoring dates. \\
+    Stability & Weekly AUC does not collapse on individual test weeks, and the weekly score distribution stays within a moderate shift of the validation reference (CSI $< 0.25$). \\
     Business scenario & Under the base scenario, estimated net impact at the chosen $K$ is positive and higher than for recency-rule and random targeting at the same $K$. \\
     \bottomrule
 \end{tabular}

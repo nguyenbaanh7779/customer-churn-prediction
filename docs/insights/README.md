@@ -18,7 +18,7 @@ All figures are on the test period (10 scoring weeks, 2,907 customers, churn rat
 ### Observation
 
 - The strongest churn signals (SHAP) are low `frequency_so_far` and low `monetary_so_far`: customers who bought once, recently started buying, buy sparsely, and have bought few products.
-- The final model (LR, Extended features, C = 0.01, weighted training) is the best churn detector (ROC-AUC 0.759, PR-AUC 0.654, Lift@10% 1.888). Yet at K = 10% with the reference measurement, its net impact is the **lowest** of the non-random candidates:
+- The final model (LR, Extended features, C = 0.01, weighted training) is the best churn detector (AUC 0.759). Yet at K = 10% with the reference measurement, its net impact is the **lowest** of the non-random candidates:
 
   | Candidate | TP (weekly) | Revenue at risk per TP | Net impact |
   |---|---|---|---|
@@ -46,7 +46,7 @@ The impact chain is: Revenue at risk × e (40% retention success) × m (35% marg
 | 1 | Revenue at risk used the **uncapped** AOV | Chapter 7 used `avg_order_value_so_far`, while Section 5.5 defines `value_v` = AOV capped at the training P99 (£1,956.84) | Added `rar_v` = `value_v`. Tested the hypothesis "the recency rule wins because it catches wholesale customers" | Only partly true: four wholesale-sized rows carry £54K of the recency rule's revenue at risk. With the cap, its net impact drops from £70,214 to £63,767, below the RFM rule. But the model still loses, because its churners are mostly one-time buyers |
 | 2 | Revenue at risk counted **one order** only | Undervalues regular buyers, who would lose several orders within H = 90 days | Added `rar_v_orders` = `value_v` × clip(90 / `mean_gap_so_far`, 1, 13); one-time customers count one order | Mean exposure more than doubles (£374 → £833) and spreads widely |
 | 3 | Campaigns were counted **per weekly row**, not per customer | Every customer is rescored every week, so the same customer stays in the top K for several weeks | Added two counting schemes: **unique** (count each customer at first targeting) and **suppressed** (fixed weekly budget; contacted customers are excluded for 13 weeks, as in Section 8.5) | The model's 1,831 TP are only 425 distinct customers (~4.3 weeks each), so totals were inflated 3–4×. Unique counting is not budget-equal (random wins by spreading wider), so **suppressed** is the realistic scheme |
-| 4 | Probabilities were **overestimated** | Weighting by 1/n raises the effective training churn rate to 62.0% (unweighted 50.0%). Multiplying P by value needs P on the right scale | Prior correction: logit_cal = logit − [logit(0.620) − logit(0.500)] = logit − 0.489. No extra data needed | Brier 0.198 → 0.195; mean predicted probability 0.468 → 0.375 (actual churn 40.1%) |
+| 4 | Probabilities were **overestimated** | Weighting by 1/n raises the effective training churn rate to 62.0% (unweighted 50.0%). Multiplying P by value needs P on the right scale | Intercept-only calibration: logit_cal = logit − δ, with δ = 0.259 fitted on the refit pool so the mean calibrated probability equals its churn rate (50.0%). The formula prior correction logit(0.620) − logit(0.500) = 0.489 overshoots, because the weights also change the feature mix | Brier 0.198 → 0.194; mean predicted probability 0.468 → 0.418 (actual churn 40.1%) |
 | 5 | Suppressed counting **saturates** at K = 10% | Over 10 test weeks with 13-week suppression, a 10% weekly budget contacts 83% of customers, so every ranking reaches nearly the same people | Added smaller weekly budgets K = 1%, 2%, 5% | Candidates separate again (results below) |
 
 All three revenue measures (`rar_aov`, `rar_v`, `rar_v_orders`) and all three counting schemes (weekly, unique, suppressed) are kept side by side for analysis. The weekly + `rar_aov` combination stays as the reference measurement.
@@ -59,7 +59,7 @@ Net impact with suppressed counting and `rar_v_orders`:
 
 | Ranking | K = 2% / week | K = 5% / week |
 |---|---|---|
-| **Expected Loss** | **£46,949** | **£65,805** |
+| **Expected Loss** | **£46,366** | **£65,354** |
 | Recency rule | £20,120 | £41,195 |
 | RFM rule | £17,963 | £38,051 |
 | Random | £15,740 | £38,305 |
@@ -67,14 +67,15 @@ Net impact with suppressed counting and `rar_v_orders`:
 
 - Expected Loss is the best ranking at every K from 1% to 5%, under **all three** revenue measures. Its lead under `rar_aov` and `rar_v` is the independent evidence, since `rar_v_orders` is what it was built on.
 - Ranking by churn probability alone is **below random** at K = 1–5% under `rar_v_orders`. This is the clearest quantitative form of Insight 1.
-- Expected Loss catches fewer churners (TP 235 vs 363 at K = 2%), but contacting a non-churner is cheap compared with keeping one high-value churner.
+- Expected Loss catches fewer churners (TP 225 vs 363 at K = 2%), but contacting a non-churner is cheap compared with keeping one high-value churner.
 
 **Operating rule:** score churn risk with the model, rank by Expected Loss, and contact a small weekly share with 13-week suppression.
 
 ### Where it lives
 
-- [`notebooks/09_evaluation.ipynb`](../../notebooks/09_evaluation.ipynb): calibration, Measurement Sensitivity, Scenario Analysis, and the `churn_probability_calibrated` and `expected_loss` scoring columns
-- [`report/content/evaluation.tex`](../../report/content/evaluation.tex): Sections 7.2, 7.5, Measurement Sensitivity, 7.10, 7.11
+- [`notebooks/04_modeling.ipynb`](../../notebooks/04_modeling.ipynb): calibration offset and risk bands, saved with the model
+- [`notebooks/05_evaluation.ipynb`](../../notebooks/05_evaluation.ipynb): Measurement Sensitivity, Scenario Analysis, and the `churn_probability_calibrated` and `expected_loss` scoring columns
+- [`report/content/evaluation.tex`](../../report/content/evaluation.tex): Sections 7.2 (revenue at risk), 7.7 (Measurement Sensitivity), 7.8 (Scenario Analysis), 7.9 (Model Comparison); calibration is in Section 6.3 of [`modeling.tex`](../../report/content/modeling.tex)
 - [`report/content/deployment.tex`](../../report/content/deployment.tex): Sections 8.3–8.5
 - [`brief/main.tex`](../../brief/main.tex) and [`slide/main.tex`](../../slide/main.tex): Recommendation
 
