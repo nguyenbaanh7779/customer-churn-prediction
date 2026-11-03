@@ -233,20 +233,35 @@
     \end{center}
     So ranking purely by churn probability does \emph{not} automatically prioritize high-value customers.
     \column{.45\textwidth}
-    The simpler rules (recency, RFM) happen to catch a higher-value subset -- even while catching \emph{fewer} churners overall. This is not a bug: the model optimizes risk, not revenue.
+    The churners the model is surest about are mostly \textbf{one-time buyers} with small baskets (median order \pounds175, vs.\ \pounds260 for the recency rule's). The simpler rules catch a higher-value subset -- even while catching \emph{fewer} churners overall. Not a bug: the model optimizes risk, not revenue.
   \end{columns}
 \end{frame}
 
 % ============================================================
 % 8. Recommendation
 % ============================================================
-\begin{frame}{Recommendation}
-  \begin{columns}[t]
-    \column{.5\textwidth}
-    \card{1}{Rank by expected value}{Score = P(churn) $\times$ customer value, not churn probability alone -- so targeting optimizes revenue, not just risk.}
-    \column{.5\textwidth}
-    \card{2}{Pilot with a control group}{This dataset has no past campaign data -- every pound figure shown is a scenario estimate, not an observed outcome.}
-  \end{columns}
+\begin{frame}{Recommendation: Rank by Expected Loss}
+  \textbf{\textcolor{hustred}{Expected loss}} $=$ calibrated P(churn) $\times$ order value $\times$ expected orders in the next 90 days -- the same model, ranked by what each departure would cost.
+
+  \vspace{0.2cm}
+  Net impact of a realistic weekly campaign (each customer contacted at most once per 13 weeks, $e{=}40\%$):
+
+  \begin{center}
+  \small
+  \begin{tabular}{@{}lcc@{}}
+    \toprule
+    Ranking & 2\% / week & 5\% / week \\
+    \midrule
+    \textbf{Expected loss} & \textbf{\pounds46.9K} & \textbf{\pounds65.8K} \\
+    Recency rule & \pounds20.1K & \pounds41.2K \\
+    Churn probability alone & \pounds12.8K & \pounds37.0K \\
+    Random & \pounds15.7K & \pounds38.3K \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.1cm}
+  {\scriptsize\color{inkgray} Next step: a pilot against a held-out control group -- no past campaign data exists, so every pound figure is a scenario estimate.}
 \end{frame}
 
 % ============================================================
@@ -256,7 +271,7 @@
   \begin{enumerate}
     \item Revenue is highly concentrated -- the top 5\% of customers already drive 52\% of it.
     \item The churn model wins on every predictive metric, but \textbf{risk is not value}: at a 10\% target it is less profitable than a simple recency rule.
-    \item Recommendation: rank by \textbf{expected value}, not churn probability alone, and validate with a real pilot before scaling.
+    \item Recommendation: rank by \textbf{expected loss} -- with a small weekly budget it more than doubles net impact over the recency rule -- and validate with a real pilot before scaling.
   \end{enumerate}
 \end{frame}
 

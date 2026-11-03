@@ -67,6 +67,20 @@ Despite leading every predictive and ranking metric, the model is \textbf{not} t
 The model catches far more churners than the simple rules, yet ends up \emph{less} profitable. The reason: a customer's average order value is only weakly related to their churn risk (\pounds269 vs.\ \pounds324 median, churned vs.\ not) -- so ranking purely by churn probability does not automatically prioritize high-value customers. The simpler rules happen to catch a higher-value subset, even while catching fewer churners overall.
 
 \section{Recommendation}
-Before a wide rollout, change the targeting score from ``churn probability'' to \textbf{expected value} (probability $\times$ customer value), so retention spend is prioritized by both risk \emph{and} revenue -- not risk alone. Validate with a real pilot campaign against a held-out control group: this dataset contains no past campaign data, so every pound figure above is a scenario estimate under the stated assumptions, not an observed outcome.
+Change the targeting score from ``churn probability'' to \textbf{expected loss}: the model's (calibrated) churn probability $\times$ the customer's order value $\times$ the orders they would place in the next 90 days. We tested this on a realistic weekly campaign -- a fixed weekly budget, each customer contacted at most once every 13 weeks:
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+    \toprule
+    Ranking (net impact) & 2\% of customers / week & 5\% of customers / week \\
+    \midrule
+    \textbf{Expected loss} & \textbf{\pounds46,949} & \textbf{\pounds65,805} \\
+    Longest time since last purchase & \pounds20,120 & \pounds41,195 \\
+    Churn probability alone & \pounds12,782 & \pounds37,031 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Expected loss more than doubles net impact at a 2\% weekly budget, and stays ahead under every way of valuing a customer we tried. Keep the weekly budget small: at 10\% a week, most customers are contacted within a quarter and the ranking barely matters. Validate with a real pilot against a held-out control group before scaling: this dataset contains no past campaign data, so every pound figure here is a scenario estimate under the stated assumptions, not an observed outcome.
 
 \end{document}
