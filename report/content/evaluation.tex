@@ -1,89 +1,9 @@
 \section{Evaluation Framework}
 \label{sec:7-1}
 
-Evaluate the final system on the unseen future test period using three layers: \textbf{Predictive Performance}, \textbf{Targeting Performance} and \textbf{Business Impact Estimation}. Results are reported overall and for the one-time and repeat segments.
-
-All evaluation uses the \textbf{Scoring Population}: every active customer at every weekly test date. The historical data contain no campaigns, so suppression is not part of the data; Section~\ref{sec:7-sens} simulates it -- removing customers contacted in the previous $S = 13$ weeks -- as one of three ways to count a weekly campaign.
-
-The same customer appears in several consecutive test weeks, so test rows are not independent. This mirrors real operations and is acceptable, but uncertainty is reported across weeks (mean $\pm$ standard deviation) or with a customer-level bootstrap rather than as if rows were independent.
-
-\textbf{Execution.} The final model (Logistic Regression, Extended feature set, $C=0.01$) is refit from scratch here using the exact recipe of Section~\ref{sec:6-7} -- trained on every labelable active row from train start to validation end (120,376 rows of 4,571 customers), weighted $1/n_i$ per customer -- rather than loaded from a saved file, so this chapter is self-contained. The test period spans 10 weekly scoring dates (2011-07-04 -- 2011-09-05, Section~\ref{sec:5-6}) and 24,252 Scoring Population rows. Repeat customers make up 86.7\% of test rows and one-time customers 13.3\%; segment-level error rates are reported in Section~\ref{sec:7-12}.
+This chapter estimates the \textbf{business value} of targeting with the final model of Chapter~\ref{ch:modeling}, whose detection quality is reported in Section~\ref{sec:6-quality}. All evaluation uses the \textbf{Scoring Population}: every active customer at every weekly test date (10 weeks, 2011-07-04 -- 2011-09-05, 24,252 rows). The same customer appears in several consecutive weeks, so uncertainty is reported across weeks rather than as if rows were independent. Repeat customers make up 86.7\% of test rows and one-time customers 13.3\%; segment-level error rates are in Section~\ref{sec:7-12}. The historical data contain no campaigns, so suppression is not part of the data; Section~\ref{sec:7-sens} simulates it -- removing customers contacted in the previous $S = 13$ weeks -- as one of three ways to count a weekly campaign.
 
 \textbf{Candidates.} Besides the final model and the three baselines (recency rule, RFM rule, random), this chapter evaluates a value-aware ranking, \textbf{Expected Loss} $=$ calibrated churn probability $\times$ revenue at risk ($V \times$ expected orders, Section~\ref{sec:7-5}). It uses the same fitted model; only the ranking key changes, from ``who is most likely to leave'' to ``whose departure would cost the most''.
-
-\section{Classification Performance}
-\label{sec:7-2}
-
-ROC-AUC, PR-AUC, Precision, Recall and F1. Always report the test churn rate next to PR-AUC as its random reference. \textbf{Calibration} (reliability curve, Brier score) is required whenever probabilities are used as values, e.g.\ expected revenue at risk; Random Forest and XGBoost may need Platt or isotonic calibration fitted on the validation period.
-
-\begin{center}
-\begin{tabular}{@{}p{2.6cm}p{1.8cm}p{1.8cm}p{2.4cm}p{1.8cm}p{1.8cm}@{}}
-    \toprule
-    Test churn rate & ROC-AUC & PR-AUC & Precision@0.5 & Recall@0.5 & F1@0.5 \\
-    \midrule
-    0.401 & 0.759 & 0.654 & 0.589 & 0.694 & 0.637 \\
-    \bottomrule
-\end{tabular}
-\end{center}
-
-ROC-AUC and PR-AUC match Section~\ref{sec:6-7}'s refit exactly, as expected from the identical recipe. PR-AUC (0.654) sits well above the test churn rate (0.401), its random reference.
-
-\begin{center}
-\includegraphics[width=0.55\textwidth]{figures/ch9_calibration_curve.png}
-\end{center}
-
-The raw probabilities (blue) sit \emph{below} the diagonal almost everywhere (Brier score $= 0.198$; mean prediction 0.468 against a test churn rate of 0.401): the model systematically overestimates churn risk. The cause is the training scheme, not the ranking: weighting each customer equally ($1/n_i$) lifts the effective churn rate of the training rows to 62.0\% (50.0\% unweighted, Section~\ref{sec:5-6}), so the intercept is pitched too high.
-
-Since Expected Loss multiplies the probability by a value, the probabilities must be calibrated first. A \textbf{prior correction} undoes the shift exactly where it comes from, using training data only: every log-odds is lowered by $\text{logit}(0.620) - \text{logit}(0.500) = 0.489$, the gap between the weighted and unweighted training churn rates. The correction is monotonic, so every ranking result for the final model is unchanged. After it (orange), the Brier score falls to 0.195 and the mean prediction to 0.375. The corrected curve now sits slightly \emph{above} the diagonal in the middle range: the remaining gap is the test period's own lower churn rate (40.1\% vs.\ 50.0\% over train+validation, Section~\ref{sec:5-4}'s seasonality), which no correction fitted before the test period can anticipate.
-
-\section{Ranking Performance}
-\label{sec:7-3}
-
-Precision@K, Recall@K, Lift@K and cumulative Gain. Because targeting happens \textbf{each week}, these metrics are computed \textbf{per scoring date} -- rank that week's full Scoring Population, cut the top $K\%$ -- and then summarized as mean $\pm$ standard deviation across test weeks. Pooled curves may be shown additionally but are not the primary result.
-
-At $K=10\%$, computed per week over the 10 test weeks and compared against the recency-rule and RFM-rule baselines (Section~\ref{sec:6-2}) and random targeting:
-
-\begin{center}
-\begin{tabular}{@{}p{2.8cm}p{2.6cm}p{2.1cm}p{2.1cm}@{}}
-    \toprule
-    Candidate & Precision@10\% & Lift@10\% & Gain@10\% \\
-    \midrule
-    Final model & $0.754 \pm 0.043$ & $1.888 \pm 0.061$ & $0.189 \pm 0.006$ \\
-    Expected Loss & $0.480 \pm 0.028$ & $1.203 \pm 0.062$ & $0.120 \pm 0.006$ \\
-    RFM rule & $0.713 \pm 0.053$ & $1.784 \pm 0.056$ & $0.179 \pm 0.006$ \\
-    Recency rule & $0.626 \pm 0.056$ & $1.565 \pm 0.061$ & $0.157 \pm 0.006$ \\
-    Random & $0.406 \pm 0.045$ & $1.017 \pm 0.110$ & $0.102 \pm 0.011$ \\
-    \bottomrule
-\end{tabular}
-\end{center}
-
-\begin{center}
-\includegraphics[width=0.85\textwidth]{figures/ch9_weekly_lift.png}
-\end{center}
-
-The final model leads every one of the 10 test weeks without exception, and its low week-to-week standard deviation (0.061 on Lift@10\%, versus 0.110 for random) shows the advantage is stable, not a lucky average. \textbf{RFM rule} here is a hand-built, untrained score (recency $-$ frequency $-$ monetary, each standardized on the training period) -- distinct from Section~\ref{sec:6-3}'s \emph{trained} Logistic Regression on the same three features -- and it is the closest competitor to the final model; the recency rule trails both. \textbf{Expected Loss} ranks far lower on these churn-detection metrics (Lift@10\% 1.20), by design: it trades some certainty of churn for the value of who churns, so fewer than half of its targets actually churn. Whether that trade pays off is a business question (Sections~\ref{sec:7-sens}--\ref{sec:7-10}).
-
-\section{Risk Band Analysis}
-\label{sec:7-4}
-
-Compare actual churn rates and customer characteristics across risk bands (e.g.\ deciles) to check that higher predicted risk corresponds to higher observed churn.
-
-\begin{center}
-\begin{tabular}{@{}p{3cm}p{3cm}p{3cm}@{}}
-    \toprule
-    Risk decile & Customers & Observed churn rate \\
-    \midrule
-    1 (lowest) & 2,426 & 4.7\% \\
-    3 & 2,425 & 22.1\% \\
-    5 & 2,425 & 41.8\% \\
-    7 & 2,425 & 50.4\% \\
-    9 & 2,425 & 63.1\% \\
-    10 (highest) & 2,426 & 75.6\% \\
-    \bottomrule
-\end{tabular}
-\end{center}
-
-Observed churn rate rises strictly monotonically across all ten deciles, from 4.7\% to 75.6\% -- a 16$\times$ spread confirming the score is informative, not just well-ranked on average.
 
 \section{Customer Revenue at Risk}
 \label{sec:7-5}
@@ -130,7 +50,7 @@ At $K=10\%$, summed across the 10 test weeks (so $N_K$ counts weekly targeting i
     Candidate & $N_K$ & $TP_K$ & $FP_K$ & Revenue at risk \\
     \midrule
     Final model & 2,427 & 1,831 & 596 & 406,981.23 \\
-    Expected Loss & 2,427 & 1,166 & 1,261 & 1,176,648.03 \\
+    Expected Loss & 2,427 & 1,132 & 1,295 & 1,165,360.89 \\
     RFM rule & 2,427 & 1,732 & 695 & 499,916.48 \\
     Recency rule & 2,427 & 1,521 & 906 & 538,397.09 \\
     Random & 2,427 & 986 & 1,441 & 330,372.57 \\
@@ -156,7 +76,7 @@ At $K=10\%$ (Section~\ref{sec:7-6}'s targeted churners), revenue preserved acros
     Candidate & $e=30\%$ & $e=40\%$ (Base) & $e=50\%$ \\
     \midrule
     Final model & 122,094.37 & 162,792.49 & 203,490.62 \\
-    Expected Loss & 352,994.41 & 470,659.21 & 588,324.02 \\
+    Expected Loss & 349,608.27 & 466,144.36 & 582,680.45 \\
     RFM rule & 149,974.94 & 199,966.59 & 249,958.24 \\
     Recency rule & 161,519.13 & 215,358.84 & 269,198.55 \\
     Random & 99,111.77 & 132,149.03 & 165,186.28 \\
@@ -186,7 +106,7 @@ At $K=10\%$, $e=40\%$ (Base), contact cost is identical across candidates by con
     Candidate & Customers targeted & Churners captured & Contact cost \\
     \midrule
     Final model & 2,427 & 1,831 & 1,213.50 \\
-    Expected Loss & 2,427 & 1,166 & 1,213.50 \\
+    Expected Loss & 2,427 & 1,132 & 1,213.50 \\
     RFM rule & 2,427 & 1,732 & 1,213.50 \\
     Recency rule & 2,427 & 1,521 & 1,213.50 \\
     Random & 2,427 & 986 & 1,213.50 \\
@@ -218,7 +138,7 @@ At $K=10\%$, $e=40\%$ (Base), $m=35\%$, $c_{\text{contact}}=\pounds0.50$, $c_{\t
     Candidate & $TP_K$ & $FP_K$ & Revenue preserved & Gross profit preserved & Contact cost & Incentive cost & Net impact \\
     \midrule
     Final model & 1,831 & 596 & 162,792.49 & 56,977.37 & 1,213.50 & 4,258.00 & 51,505.87 \\
-    Expected Loss & 1,166 & 1,261 & 470,659.21 & 164,730.72 & 1,213.50 & 3,593.00 & \textbf{159,924.22} \\
+    Expected Loss & 1,132 & 1,295 & 466,144.36 & 163,150.52 & 1,213.50 & 3,559.00 & \textbf{158,378.02} \\
     RFM rule & 1,732 & 695 & 199,966.59 & 69,988.31 & 1,213.50 & 4,159.00 & 64,615.81 \\
     Recency rule & 1,521 & 906 & 215,358.84 & 75,375.59 & 1,213.50 & 3,948.00 & 70,214.09 \\
     Random & 986 & 1,441 & 132,149.03 & 46,252.16 & 1,213.50 & 3,413.00 & 41,625.66 \\
@@ -226,7 +146,7 @@ At $K=10\%$, $e=40\%$ (Base), $m=35\%$, $c_{\text{contact}}=\pounds0.50$, $c_{\t
 \end{tabular}
 \end{center}
 
-\textbf{Counter-intuitive result.} At this operating point, the \emph{final model's net business impact is below both rule-based baselines} -- even below the simple recency rule -- despite capturing the most churners and leading every predictive and ranking metric in this chapter. The reason is visible in Section~\ref{sec:7-6}: revenue at risk is driven by \emph{which} customers are targeted (their average order value), not by how many churners are caught. The recency and RFM rules happen to target a higher-order-value subset of customers, so they preserve more revenue per targeted churner even while catching fewer of them. This is not a bug in the model -- it optimizes churn-probability ranking, not revenue-weighted ranking -- but it means \textbf{the best classifier is not automatically the best business decision at a fixed $K$}. Ranking the same model's output by value instead (Expected Loss) triples net impact under this measurement, to \pounds159,924. That figure is inflated by the reference measurement itself, however: Expected Loss reaches only 223 distinct churners and counts each about five times, once per week they stay in its top 10\% -- which is why Section~\ref{sec:7-sens} changes how the campaign is counted.
+\textbf{Counter-intuitive result.} At this operating point, the \emph{final model's net business impact is below both rule-based baselines} -- even below the simple recency rule -- despite capturing the most churners and leading every ranking metric of Section~\ref{sec:6-quality}. The reason is visible in Section~\ref{sec:7-6}: revenue at risk is driven by \emph{which} customers are targeted (their average order value), not by how many churners are caught. The recency and RFM rules happen to target a higher-order-value subset of customers, so they preserve more revenue per targeted churner even while catching fewer of them. This is not a bug in the model -- it optimizes churn-probability ranking, not revenue-weighted ranking -- but it means \textbf{the best classifier is not automatically the best business decision at a fixed $K$}. Ranking the same model's output by value instead (Expected Loss) triples net impact under this measurement, to \pounds158,378. That figure is inflated by the reference measurement itself, however: Expected Loss reaches only 214 distinct churners and counts each about five times, once per week they stay in its top 10\% -- which is why Section~\ref{sec:7-sens} changes how the campaign is counted.
 
 \section{Measurement Sensitivity: Value and Counting}
 \label{sec:7-sens}
@@ -249,19 +169,19 @@ Net impact at $K=10\%$, $e=40\%$, for every combination (``Churners'' is the num
     Counting & Candidate & Targeted & $TP_K$ & Churners & \texttt{rar\_aov} & \texttt{rar\_v} & \texttt{rar\_v\_orders} \\
     \midrule
     Weekly & Final model & 2,427 & 1,831 & 425 & 51,506 & 51,506 & 64,698 \\
-     & Expected Loss & 2,427 & 1,166 & 223 & \textbf{159,924} & \textbf{113,688} & \textbf{269,342} \\
+     & Expected Loss & 2,427 & 1,132 & 214 & \textbf{158,378} & \textbf{112,113} & \textbf{270,653} \\
      & Recency rule & 2,427 & 1,521 & 542 & 70,214 & 63,767 & 94,395 \\
      & RFM rule & 2,427 & 1,732 & 531 & 64,616 & 64,616 & 84,222 \\
      & Random & 2,427 & 986 & 719 & 41,626 & 41,329 & 72,988 \\
     \midrule
     Unique & Final model & 577 & 425 & 425 & 13,679 & 13,679 & 17,249 \\
-     & Expected Loss & 435 & 210 & 210 & 24,850 & 19,748 & 45,140 \\
+     & Expected Loss & 431 & 199 & 199 & 24,192 & 19,090 & 44,647 \\
      & Recency rule & 899 & 542 & 542 & 26,072 & 23,234 & 33,790 \\
      & RFM rule & 771 & 531 & 531 & 20,134 & 20,134 & 25,920 \\
      & Random & 1,635 & 679 & 679 & \textbf{28,731} & \textbf{28,625} & \textbf{47,586} \\
     \midrule
     Suppressed & Final model & 2,427 & 1,212 & 1,212 & \textbf{54,830} & \textbf{49,787} & 77,305 \\
-     & Expected Loss & 2,427 & 1,007 & 1,007 & 54,707 & 49,605 & \textbf{81,355} \\
+     & Expected Loss & 2,427 & 1,000 & 1,000 & 54,513 & 49,411 & \textbf{81,337} \\
      & Recency rule & 2,427 & 1,152 & 1,152 & 52,865 & 48,144 & 75,114 \\
      & RFM rule & 2,427 & 1,220 & 1,220 & 51,350 & 49,700 & 70,273 \\
      & Random & 2,427 & 986 & 986 & 47,364 & 42,321 & 71,258 \\
@@ -271,7 +191,7 @@ Net impact at $K=10\%$, $e=40\%$, for every combination (``Churners'' is the num
 
 Four observations:
 \begin{enumerate}
-    \item \textbf{Weekly counting inflates every total, unequally.} The final model reaches only 425 distinct churners behind its 1,831 $TP_K$ (4.3 weeks each), Expected Loss 223 behind 1,166 (5.2 each), random 719 behind 986. Rankings that keep the same customers at the top are rewarded for it.
+    \item \textbf{Weekly counting inflates every total, unequally.} The final model reaches only 425 distinct churners behind its 1,831 $TP_K$ (4.3 weeks each), Expected Loss 214 behind 1,132 (5.3 each), random 719 behind 986. Rankings that keep the same customers at the top are rewarded for it.
     \item \textbf{Capping matters only for the recency rule.} Four targeted wholesale-sized rows carry \pounds54K of its raw revenue at risk; with $V$ its weekly net impact falls from \pounds70,214 to \pounds63,767, below the RFM rule. The final model and the RFM rule never reach those accounts.
     \item \textbf{Unique counting mostly measures reach.} Because it is not budget-equal, random -- which spreads its selections over 1,635 customers -- comes out on top; the ranking that re-selects the most (the final model, 577 customers) comes out last.
     \item \textbf{Under suppressed counting at $K=10\%$, the candidates converge} (\pounds70--81K under \texttt{rar\_v\_orders}): with a 13-week suppression over a 10-week test, a 10\% weekly budget contacts 83\% of all 2,907 test customers at least once, so every ranking ends up reaching almost the same people, only in a different order. Section~\ref{sec:7-10} therefore looks at smaller weekly shares.
@@ -290,25 +210,25 @@ Net impact under the realistic scheme -- suppressed counting -- for weekly targe
     $K$ & Candidate & Reach & $TP_K$ & \texttt{rar\_aov} & \texttt{rar\_v} & \texttt{rar\_v\_orders} & vs.\ recency \\
     \midrule
     1\% & Final model & 8\% & 185 & 3,926 & 3,926 & 4,899 & $-$4,536 \\
-     & Expected Loss & 8\% & 119 & \textbf{17,949} & \textbf{12,848} & \textbf{34,326} & $+$24,891 \\
+     & Expected Loss & 8\% & 113 & \textbf{17,660} & \textbf{12,558} & \textbf{35,258} & $+$25,823 \\
      & Recency rule & 8\% & 166 & 6,157 & 6,157 & 9,435 & -- \\
      & RFM rule & 8\% & 188 & 6,501 & 6,501 & 6,969 & $-$2,465 \\
      & Random & 8\% & 100 & 4,882 & 4,690 & 7,462 & $-$1,972 \\
     \midrule
     2\% & Final model & 17\% & 363 & 10,776 & 10,776 & 12,782 & $-$7,337 \\
-     & Expected Loss & 17\% & 235 & \textbf{26,047} & \textbf{20,917} & \textbf{46,949} & $+$26,829 \\
+     & Expected Loss & 17\% & 225 & \textbf{25,704} & \textbf{20,574} & \textbf{46,366} & $+$26,247 \\
      & Recency rule & 17\% & 315 & 15,057 & 13,253 & 20,120 & -- \\
      & RFM rule & 17\% & 362 & 13,581 & 13,581 & 17,963 & $-$2,157 \\
      & Random & 17\% & 189 & 7,964 & 7,964 & 15,740 & $-$4,380 \\
     \midrule
     5\% & Final model & 42\% & 766 & 28,866 & 27,832 & 37,031 & $-$4,164 \\
-     & Expected Loss & 42\% & 539 & \textbf{41,365} & \textbf{36,263} & \textbf{65,805} & $+$24,610 \\
+     & Expected Loss & 42\% & 517 & \textbf{40,594} & \textbf{35,493} & \textbf{65,354} & $+$24,159 \\
      & Recency rule & 42\% & 688 & 31,175 & 28,278 & 41,195 & -- \\
      & RFM rule & 42\% & 742 & 29,214 & 28,181 & 38,051 & $-$3,144 \\
      & Random & 42\% & 496 & 21,452 & 21,347 & 38,305 & $-$2,890 \\
     \midrule
     10\% & Final model & 83\% & 1,212 & 54,830 & 49,787 & 77,305 & $+$2,191 \\
-     & Expected Loss & 83\% & 1,007 & 54,707 & 49,605 & 81,355 & $+$6,242 \\
+     & Expected Loss & 83\% & 1,000 & 54,513 & 49,411 & 81,337 & $+$6,224 \\
      & Recency rule & 83\% & 1,152 & 52,865 & 48,144 & 75,114 & -- \\
      & RFM rule & 83\% & 1,220 & 51,350 & 49,700 & 70,273 & $-$4,841 \\
      & Random & 83\% & 986 & 47,364 & 42,321 & 71,258 & $-$3,855 \\
@@ -316,28 +236,28 @@ Net impact under the realistic scheme -- suppressed counting -- for weekly targe
 \end{tabular}
 \end{center}
 
-Below saturation, the picture is consistent across all three revenue measures. \textbf{Expected Loss is the best ranking at every $K$ from 1\% to 5\%}, by a wide margin -- at $K=2\%$, \pounds46,949 against \pounds20,120 for the recency rule and \pounds12,782 for the final model under \texttt{rar\_v\_orders}, and still ahead under the raw order value it was not built on (\pounds26,047 vs.\ \pounds15,057 and \pounds10,776). The final model, ranking by churn probability alone, is the \emph{weakest} ranking at these budgets under \texttt{rar\_v\_orders} -- below even random targeting: it spends a scarce budget on customers who are almost certain to leave but would cost little (mostly one-time buyers, Section~\ref{sec:7-12}). Expected Loss catches fewer churners ($TP_K$ 235 vs.\ 363 at $K=2\%$) -- its targets churn less often -- but the cost of contacting a non-churner (\pounds0.50 plus a 20\% chance of a \pounds5 redemption) is small next to the value of keeping one high-value churner. One caveat: Expected Loss is built on \texttt{rar\_v\_orders}, so its lead under that measure is partly by construction; its lead under \texttt{rar\_aov} and \texttt{rar\_v} is the independent evidence.
+Below saturation, the picture is consistent across all three revenue measures. \textbf{Expected Loss is the best ranking at every $K$ from 1\% to 5\%}, by a wide margin -- at $K=2\%$, \pounds46,366 against \pounds20,120 for the recency rule and \pounds12,782 for the final model under \texttt{rar\_v\_orders}, and still ahead under the raw order value it was not built on (\pounds25,704 vs.\ \pounds15,057 and \pounds10,776). The final model, ranking by churn probability alone, is the \emph{weakest} ranking at these budgets under \texttt{rar\_v\_orders} -- below even random targeting: it spends a scarce budget on customers who are almost certain to leave but would cost little (mostly one-time buyers, Section~\ref{sec:7-12}). Expected Loss catches fewer churners ($TP_K$ 225 vs.\ 363 at $K=2\%$) -- its targets churn less often -- but the cost of contacting a non-churner (\pounds0.50 plus a 20\% chance of a \pounds5 redemption) is small next to the value of keeping one high-value churner. One caveat: Expected Loss is built on \texttt{rar\_v\_orders}, so its lead under that measure is partly by construction; its lead under \texttt{rar\_aov} and \texttt{rar\_v} is the independent evidence.
 
 \section{Model Comparison}
 \label{sec:7-11}
 
-Compare candidates (including baselines) on predictive metrics, ranking metrics, calibration, operational targeting capacity and business-impact scenarios. Do not define a single "best" model from classification metrics alone when the objective depends on ranking and cost constraints.
+Compare candidates (including baselines) on detection quality and business-impact scenarios. Do not define a single "best" model from classification metrics alone when the objective depends on ranking and cost constraints.
 
 \begin{center}
-\begin{tabular}{@{}p{2.6cm}p{1.4cm}p{1.4cm}p{2.6cm}p{2.8cm}p{3cm}@{}}
+\begin{tabular}{@{}p{3cm}p{1.6cm}p{4.2cm}p{4.2cm}@{}}
     \toprule
-    Candidate & ROC-AUC & PR-AUC & Weekly Lift@10\% & Net impact, reference (weekly, \texttt{rar\_aov}, $K$=10\%) & Net impact, realistic (suppressed, \texttt{rar\_v\_orders}, $K$=5\%) \\
+    Candidate & AUC & Net impact, reference (weekly, \texttt{rar\_aov}, $K$=10\%) & Net impact, realistic (suppressed, \texttt{rar\_v\_orders}, $K$=5\%) \\
     \midrule
-    Final model & \textbf{0.759} & \textbf{0.654} & $\mathbf{1.888 \pm 0.061}$ & 51,506 & 37,031 \\
-    Expected Loss & 0.552 & 0.452 & $1.203 \pm 0.062$ & \textbf{159,924} & \textbf{65,805} \\
-    RFM rule & 0.728 & 0.614 & $1.784 \pm 0.056$ & 64,616 & 38,051 \\
-    Recency rule & 0.638 & 0.531 & $1.565 \pm 0.061$ & 70,214 & 41,195 \\
-    Random & 0.506 & 0.404 & $1.017 \pm 0.110$ & 41,626 & 38,305 \\
+    Final model & \textbf{0.759} & 51,506 & 37,031 \\
+    Expected Loss & 0.533 & \textbf{158,378} & \textbf{65,354} \\
+    RFM rule & 0.728 & 64,616 & 38,051 \\
+    Recency rule & 0.638 & 70,214 & 41,195 \\
+    Random & 0.506 & 41,626 & 38,305 \\
     \bottomrule
 \end{tabular}
 \end{center}
 
-No candidate wins on every column, and the split is now clean. The final model's \emph{probability} is unambiguously the best churn detector (ROC-AUC, PR-AUC, Lift@10\% and its stability) -- against the Success Criteria of Section~\ref{sec:2-6}, it clears the ``PR-AUC/Lift beat the baselines'' bar comfortably. But ranked by that probability alone, it is not the best business decision: it trails the recency rule in net impact under both the reference and the realistic measurement. Ranked by \textbf{Expected Loss} -- the same model, calibrated and multiplied by each customer's value -- it meets the ``business-scenario'' criterion (positive and above the recency rule and random at the same $K$) under every measurement and every weekly budget from 1\% to 10\% with suppression. The recommended operating rule is therefore: \textbf{score churn risk with the model, rank by Expected Loss, contact a small weekly share with suppression} (Chapter~\ref{ch:deployment}). All figures remain scenario estimates under the stated assumptions (Section~\ref{sec:7-12}).
+No candidate wins on every column, and the split is now clean. The final model's \emph{probability} is unambiguously the best churn detector (highest AUC, Section~\ref{sec:6-quality}) -- against the Success Criteria of Section~\ref{sec:2-6}, it clears the ``AUC beats the baselines'' bar comfortably. Expected Loss has a far lower AUC by design: it trades some certainty of churn for the value of who churns, so fewer than half of its targets actually churn. But ranked by probability alone, the final model is not the best business decision: it trails the recency rule in net impact under both the reference and the realistic measurement. Ranked by \textbf{Expected Loss} -- the same model, calibrated and multiplied by each customer's value -- it meets the ``business-scenario'' criterion (positive and above the recency rule and random at the same $K$) under every measurement and every weekly budget from 1\% to 10\% with suppression. The recommended operating rule is therefore: \textbf{score churn risk with the model, rank by Expected Loss, contact a small weekly share with suppression} (Chapter~\ref{ch:deployment}). All figures remain scenario estimates under the stated assumptions (Section~\ref{sec:7-12}).
 
 \section{Error Analysis and Limitations}
 \label{sec:7-12}

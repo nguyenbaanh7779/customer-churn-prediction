@@ -1,66 +1,46 @@
-\documentclass[aspectratio=169,11pt]{beamer}
+% !LW recipe=lualatex x2
+\documentclass[aspectratio=169,10pt]{beamer}
 
 % ============================================================
-% HUST-styled Beamer theme (built from scratch — no official
-% HUST .sty/template was available to reuse; colors and the
-% dotted decorative pattern are visual approximations of a
-% reference HUST deck, not official brand assets. Swap
-% \hustred/\hustgold or the logo placeholder below if exact
-% brand values become available.)
+% Official HUST Beamer theme (red, 16:9), vendored in hust-beamer/
+% -- see hust-beamer/README.md for its source. Compile with
+% LuaLaTeX (twice) so the Lato and TeX Gyre Adventor fonts are found.
 % ============================================================
-\usetheme{default}
-\usepackage{fontspec}
-\usepackage{tikz}
+\makeatletter
+\def\input@path{{hust-beamer/}}
+\makeatother
+\usetheme[
+  color=red,
+  font=lato,
+  titlefont=avantgarde,
+  footerlogo=full,
+  bar=thin,
+  titlepage=cover,
+  sectionpage=panel,
+  numbering=fraction,
+  progressbar=on,
+  footermeta=on,
+  dateaddress=off,
+  toctitle={Outline},
+  reftitle={References}
+]{HUST}
+\graphicspath{{hust-beamer/assets/}{figures/}}
 \usepackage{booktabs}
-\usetikzlibrary{calc}
+% The theme draws with these TikZ libraries; its optional hust-setup.tex
+% (not used here) would otherwise load them.
+\usetikzlibrary{calc, decorations.markings, arrows.meta}
 
-\definecolor{hustred}{HTML}{C8102E}
-\definecolor{hustgold}{HTML}{F2A900}
-\definecolor{cardgray}{HTML}{F0F0F0}
-\definecolor{inkgray}{HTML}{52514E}
+% ---- Shared macros: numbered card, stat tile ----
+\definecolor{cardgray}{HTML}{F2F2F2}
+\definecolor{inkgray}{HTML}{55585B}
 
-\setbeamertemplate{navigation symbols}{}
-\setbeamersize{text margin left=0.9cm, text margin right=0.9cm}
-\setbeamercolor{background canvas}{bg=white}
-\setbeamercolor{normal text}{fg=black}
-\setbeamerfont{normal text}{family=\sffamily}
-\setbeamercolor{frametitle}{bg=hustred, fg=white}
-\setbeamerfont{frametitle}{series=\bfseries, size=\Large}
-\setbeamertemplate{itemize items}[circle]
-\setbeamercolor{itemize item}{fg=hustred}
-
-% ---- Custom frame title: red bar + page badge + gold rule ----
-\setbeamertemplate{frametitle}{%
-  \vskip-1pt%
-  \makebox[0pt][l]{\hspace*{-0.9cm}%
-  \begin{tikzpicture}[baseline=0pt]
-    \useasboundingbox (0,0) rectangle (\paperwidth,1.15cm);
-    \fill[hustred] (0,0) rectangle (\paperwidth,1.15cm);
-    \node[anchor=west, text=white, font=\bfseries\Large, align=left, text width=\paperwidth-2.6cm] at (0.5cm,0.6cm) {\insertframetitle};
-    \node[anchor=east, text=white, font=\normalsize] at ($(\paperwidth,0)+(-0.5cm,0.6cm)$) {\insertframenumber/\inserttotalframenumber};
-  \end{tikzpicture}}\par
-  \makebox[0pt][l]{\hspace*{-0.9cm}{\color{hustgold}\rule{\paperwidth}{2.2pt}}}\par
-  \vskip 0.15cm
-}
-
-% ---- Custom footline: text logo lockup + thin rule ----
-\setbeamertemplate{footline}{%
-  \makebox[0pt][l]{\hspace*{-0.9cm}{\color{hustred!60}\rule{\paperwidth}{0.6pt}}}\par
-  \vskip 1pt
-  \hspace{0.9cm}%
-  \raisebox{0pt}{\tikz\node[fill=hustred, text=white, font=\bfseries\tiny, inner sep=2pt]{H};}%
-  \hspace{3pt}{\tiny\color{inkgray} HUST \textbar{} Customer Churn Prediction}%
-  \vskip 2pt
-}
-
-% ---- Reusable macros: numbered card, stat tile ----
-\newcommand{\cardbadge}[1]{\tikz[baseline=-0.65ex]{\node[circle, fill=hustred, text=white, font=\bfseries\small, inner sep=0pt, minimum size=20pt] {#1};}}
+\newcommand{\cardbadge}[1]{\tikz[baseline=-0.65ex]{\node[circle, fill=hustcrimson, text=white, font=\bfseries\small, inner sep=0pt, minimum size=20pt] {#1};}}
 
 \newcommand{\card}[3]{%
   \begin{tikzpicture}
     \node[rounded corners=6pt, fill=cardgray, inner sep=8pt, text width=3.3cm, align=left, anchor=north west] {%
       \cardbadge{#1}\\[6pt]
-      {\bfseries\small\color{hustred} #2}\\[3pt]
+      {\bfseries\small\color{hustcrimson} #2}\\[3pt]
       {\scriptsize\color{inkgray} #3}%
     };
   \end{tikzpicture}%
@@ -70,236 +50,42 @@
   \begin{tikzpicture}
     \node[rounded corners=6pt, fill=cardgray, inner sep=6pt, minimum width=2.9cm, align=center] {%
       \begin{minipage}{2.5cm}\centering
-        {\color{hustred}\bfseries\large #1}\\[0pt]
+        {\color{hustcrimson}\bfseries\large #1}\\[0pt]
         {\scriptsize\color{inkgray} #2}
       \end{minipage}%
     };
   \end{tikzpicture}%
 }
 
-% ---- Decorative dot spray (TikZ, procedural — no external image) ----
-% Must be called *inside* an existing tikzpicture, given a coordinate name,
-% e.g. \dotspray{(mycenter)}{hustred} after \coordinate (mycenter) at (...);
-\newcommand{\dotspray}[2]{%
-  \foreach \r in {0.3,0.7,...,3.3}{
-    \foreach \a in {0,20,...,340}{
-      \pgfmathsetmacro{\op}{max(0.12,1-\r/3.6)}
-      \filldraw[#2, opacity=\op] ($#1+(\a:\r)$) circle (1.3pt);
-    }
-  }
-}
-
-\title{Customer Churn Prediction}
-\author{}
-\date{}
+\title[Customer Churn Prediction]{Customer Churn Prediction}
+\subtitle{Value-aware targeting for retention marketing on Online Retail II}
+\author[Group 3]{Group 3}
+\institute{Business Data Analytics\\Hanoi University of Science and Technology}
+\date{November 2026}
 
 \begin{document}
 
-% ============================================================
-% 1. Title slide
-% ============================================================
-{
-\setbeamertemplate{footline}{}
-\begin{frame}[plain]
-  \begin{tikzpicture}[remember picture, overlay]
-    \coordinate (titledots) at ($(current page.north east)+(-2.6,-2.6)$);
-    \dotspray{(titledots)}{hustred}
-  \end{tikzpicture}
-  \vspace{0.3cm}
-
-  \tikz\node[fill=hustred, text=white, font=\bfseries, inner sep=6pt]{HUST};\\[0.15cm]
-  {\scriptsize\color{inkgray} TRƯỜNG ĐẠI HỌC BÁCH KHOA HÀ NỘI\\ HANOI UNIVERSITY OF SCIENCE AND TECHNOLOGY}
-
-  \vspace{0.5cm}
-  {\LARGE\bfseries\color{hustred} Customer Churn Prediction}\\[0.3cm]
-  {\large\bfseries\color{inkgray} Value-Aware Targeting for Retention Marketing}\\[0.2cm]
-  {\normalsize\color{inkgray} RFM features, Logistic Regression, and a business-impact evaluation\\ on the Online Retail II dataset}
-
-  \vspace{0.5cm}
-  {\bfseries Group 3 \textbar{} Business Data Analytics -- 10-minute presentation}
-
-  \vspace{0.4cm}
-  {\color{hustred!70}\small ONE LOVE. ONE FUTURE}
-\end{frame}
-}
-
-% ============================================================
-% 2. Objective
-% ============================================================
-\begin{frame}{The Business Problem}
-  \begin{columns}[t]
-    \column{.33\textwidth}
-    \card{1}{Existing customers drive revenue}{Repeat customers already generate most of the revenue -- protecting them matters more than chasing new ones.}
-    \column{.33\textwidth}
-    \card{2}{Retention is cheaper}{Keeping an at-risk customer costs far less than acquiring a replacement.}
-    \column{.33\textwidth}
-    \card{3}{Churn = 90 days quiet}{A customer is labeled churned if they make no valid purchase within 90 days of a weekly snapshot.}
-  \end{columns}
-
-  \vspace{0.45cm}
-  \textbf{Goal:} a weekly churn score per customer -- and a check that acting on it makes business sense.
+\hustsetup{slogantext={}}
+\begin{frame}[plain,noframenumbering]
+  \titlepage
 \end{frame}
 
-% ============================================================
-% 3. Insight 1 -- value concentration
-% ============================================================
-\begin{frame}{Insight 1: Revenue is highly concentrated}
-  \begin{columns}[t]
-    \column{.5\textwidth}
-    \vspace{0.15cm}
-    \includegraphics[width=\textwidth]{figures/value_concentration.png}
-    \column{.5\textwidth}
-    \stattile{32\%}{top 1\% of customers}\\[0.1cm]
-    \stattile{52\%}{top 5\% of customers}\\[0.1cm]
-    \stattile{64\%}{top 10\% of customers}
-
-    \vspace{0.12cm}
-    {\scriptsize\color{inkgray} High-value customers are where retention spend has the most leverage.}
-  \end{columns}
+\begin{frame}[noprogressbar]{\husttoctitle}{\husttocsubtitle}
+  \tableofcontents[hideallsubsections]
 \end{frame}
 
-% ============================================================
-% 4. Approach (compact)
-% ============================================================
-\begin{frame}{Our Approach (in brief)}
-  \begin{columns}[t]
-    \column{.33\textwidth}
-    \card{1}{Weekly snapshots}{One row per customer per Monday, only for customers active and not yet lost (recency $\leq$ 136 days).}
-    \column{.33\textwidth}
-    \card{2}{8 point-in-time features}{RFM, order value, tenure, purchase rhythm and recent activity -- all leakage-safe by construction.}
-    \column{.33\textwidth}
-    \card{3}{Final model}{Logistic Regression, $C{=}0.01$, trained on every weekly snapshot with per-customer weights -- each choice made on validation.}
-  \end{columns}
-\end{frame}
+% One file per part, so each presenter edits their own.
+\input{sections/01_business_problem}
+\input{sections/02_data_and_model}
+\input{sections/03_business_impact}
+\input{sections/04_conclusion}
 
-% ============================================================
-% 5. Results
-% ============================================================
-\begin{frame}{Model Results}
-  \begin{columns}[t]
-    \column{.5\textwidth}
-    \stattile{0.759}{ROC-AUC (test)}\quad
-    \stattile{0.654}{PR-AUC (test)}\\[0.15cm]
-    \stattile{1.89}{Lift@10\% (weekly mean)}\quad
-    \stattile{0.75}{Precision@10\%}
-
-    \vspace{0.15cm}
-    {\scriptsize\color{inkgray} Leads every baseline in all 10 test weeks, with low week-to-week variance.}
-    \column{.5\textwidth}
-    \includegraphics[width=\textwidth]{figures/weekly_lift.png}
-  \end{columns}
-\end{frame}
-
-% ============================================================
-% 6. Insight 2 -- counter-intuitive result
-% ============================================================
-\begin{frame}{Insight 2: Best Model $\neq$ Most Profitable}
-  At the standard 10\% targeting level ($e{=}40\%$, $m{=}35\%$):
-
-  \begin{center}
-  \small
-  \begin{tabular}{@{}lccc@{}}
-    \toprule
-    Candidate & Churners caught & Net business impact \\
-    \midrule
-    \textbf{Churn model} & \textbf{1,831} & \pounds51,506 \\
-    RFM rule (hand-built) & 1,732 & \pounds64,616 \\
-    Recency rule & 1,521 & \textbf{\pounds70,214} \\
-    Random & 986 & \pounds41,626 \\
-    \bottomrule
-  \end{tabular}
-  \end{center}
-
-  \vspace{0.3cm}
-  {\color{hustred}\bfseries Counter-intuitive:} the model catches the most churners and wins every predictive metric -- yet ends up the \emph{least} profitable of the three real rules.
-\end{frame}
-
-% ============================================================
-% 7. Insight 3 -- root cause
-% ============================================================
-\begin{frame}{Insight 3: Risk $\neq$ Value}
-  \begin{columns}[t]
-    \column{.55\textwidth}
-    Average order value shows only \textbf{weak separation} by churn outcome:
-    \begin{center}
-    \small
-    \begin{tabular}{@{}lcc@{}}
-      \toprule
-       & Churned & Not churned \\
-      \midrule
-      Median AOV & \pounds269 & \pounds324 \\
-      \bottomrule
-    \end{tabular}
-    \end{center}
-    So ranking purely by churn probability does \emph{not} automatically prioritize high-value customers.
-    \column{.45\textwidth}
-    The churners the model is surest about are mostly \textbf{one-time buyers} with small baskets (median order \pounds175, vs.\ \pounds260 for the recency rule's). The simpler rules catch a higher-value subset -- even while catching \emph{fewer} churners overall. Not a bug: the model optimizes risk, not revenue.
-  \end{columns}
-\end{frame}
-
-% ============================================================
-% 8. Recommendation
-% ============================================================
-\begin{frame}{Recommendation: Rank by Expected Loss}
-  \textbf{\textcolor{hustred}{Expected loss}} $=$ calibrated P(churn) $\times$ order value $\times$ expected orders in the next 90 days -- the same model, ranked by what each departure would cost.
-
-  \vspace{0.2cm}
-  Net impact of a realistic weekly campaign (each customer contacted at most once per 13 weeks, $e{=}40\%$):
-
-  \begin{center}
-  \small
-  \begin{tabular}{@{}lcc@{}}
-    \toprule
-    Ranking & 2\% / week & 5\% / week \\
-    \midrule
-    \textbf{Expected loss} & \textbf{\pounds46.9K} & \textbf{\pounds65.8K} \\
-    Recency rule & \pounds20.1K & \pounds41.2K \\
-    Churn probability alone & \pounds12.8K & \pounds37.0K \\
-    Random & \pounds15.7K & \pounds38.3K \\
-    \bottomrule
-  \end{tabular}
-  \end{center}
-
-  \vspace{0.1cm}
-  {\scriptsize\color{inkgray} Next step: a pilot against a held-out control group -- no past campaign data exists, so every pound figure is a scenario estimate.}
-\end{frame}
-
-% ============================================================
-% 9. Summary
-% ============================================================
-\begin{frame}{Summary: Three Takeaways}
-  \begin{enumerate}
-    \item Revenue is highly concentrated -- the top 5\% of customers already drive 52\% of it.
-    \item The churn model wins on every predictive metric, but \textbf{risk is not value}: at a 10\% target it is less profitable than a simple recency rule.
-    \item Recommendation: rank by \textbf{expected loss} -- with a small weekly budget it more than doubles net impact over the recency rule -- and validate with a real pilot before scaling.
-  \end{enumerate}
-\end{frame}
-
-% ============================================================
-% 10. Thank you
-% ============================================================
-{
-\setbeamertemplate{footline}{}
-\begin{frame}[plain]
-  \begin{tikzpicture}[remember picture, overlay]
-    \fill[hustred] (current page.south west) rectangle ($(current page.north west)+(0.38\paperwidth,0)$);
-    \coordinate (closedots) at ($(current page.south west)+(0.19\paperwidth,4.2cm)$);
-    \begin{scope}
-      \clip (current page.south west) rectangle ($(current page.north west)+(0.38\paperwidth,0)$);
-      \dotspray{(closedots)}{white}
-    \end{scope}
-    \node[anchor=south west, xshift=0.4cm, yshift=0.4cm] at (current page.south west) {\tikz\node[fill=white, text=hustred, font=\bfseries, inner sep=6pt]{HUST};};
-    \node[anchor=south west, xshift=0.4cm, yshift=0.2cm] at ($(current page.south west)+(0,0.9cm)$) {\scriptsize\color{white} hust.edu.vn \textbar{} fb.com/dhbkhn};
-  \end{tikzpicture}
-  \begin{tikzpicture}[remember picture, overlay]
-    \node[anchor=west, xshift=0.42\paperwidth, yshift=0.3cm] at (current page.west) {%
-      \begin{minipage}{0.5\paperwidth}
-        {\Huge\bfseries\color{hustred} Thank you!}\\[0.3cm]
-        {\Large\color{inkgray} Questions?}
-      \end{minipage}%
-    };
-  \end{tikzpicture}
-\end{frame}
-}
+\begin{hustdarkframe}
+  \centering
+  \vspace*{0.22\paperheight}
+  {\Huge\bfseries\color{white} Thank you!\par}
+  \vspace{1.2em}
+  {\Large\color{white!85} Questions?\par}
+\end{hustdarkframe}
 
 \end{document}

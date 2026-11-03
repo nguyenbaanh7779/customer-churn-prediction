@@ -18,7 +18,7 @@ $\rightarrow$ \textbf{Snapshots} $\rightarrow$ \textbf{Features} $\rightarrow$ \
 \section{Customer Risk Output}
 \label{sec:8-3}
 
-Minimum output: \texttt{customer\_id}, \texttt{snapshot\_date}, \texttt{churn\_probability}, \texttt{churn\_probability\_calibrated} (prior-corrected, Section~\ref{sec:7-2}), \texttt{expected\_loss} (calibrated probability $\times$ $V$ $\times$ expected orders in $H$, Section~\ref{sec:7-sens}), \texttt{risk\_score}, \texttt{risk\_band}, \texttt{rank}, \texttt{segment}, \texttt{model\_version}.
+Minimum output: \texttt{customer\_id}, \texttt{snapshot\_date}, \texttt{churn\_probability}, \texttt{churn\_probability\_calibrated} (Section~\ref{sec:6-quality}), \texttt{expected\_loss} (calibrated probability $\times$ $V$ $\times$ expected orders in $H$, Section~\ref{sec:7-sens}), \texttt{risk\_band} (fixed cut-offs on the calibrated probability, Section~\ref{sec:6-quality}), \texttt{rank} (by expected loss within the week, 1 = first to contact), \texttt{segment}, \texttt{model\_version}.
 
 \section{Target Population}
 \label{sec:8-4}
@@ -39,4 +39,16 @@ Customers \textbf{contacted} in a campaign are excluded from the Scoring Populat
 \section{Monitoring}
 \label{sec:8-6}
 
-Data quality, feature drift, model performance, calibration, lift, risk-band behavior and business metrics where available.
+Data quality, feature drift and business metrics where available, plus the weekly model checks of Section~\ref{sec:6-quality} against the validation reference. They split by when they become available:
+
+\begin{itemize}
+    \item \textbf{Immediately, without labels:} HHI and CSI of the risk-band distribution. CSI is the early warning -- on the test period it already crossed 0.10 within six weeks as the churn rate fell.
+    \item \textbf{After $H = 90$ days, once labels mature:} AUC, Brier score, and the mean calibrated probability against the observed churn rate.
+\end{itemize}
+
+Calibration is tied to the churn rate of the data it was fitted on, so it drifts whenever that rate moves -- as it does seasonally here. Two responses, from light to heavy:
+
+\begin{itemize}
+    \item \textbf{Recalibrate} (quarterly, or when the mean calibrated probability and the observed churn rate differ by more than about 5 percentage points): refit only the log-odds offset $\delta$ on the latest weeks with matured labels. The model, its ranking and the band order are untouched; the band cut-offs are recomputed from the same weeks. Because labels arrive $H$ days late, the recalibrated rate always reflects the previous quarter -- the churn rate of the same season a year earlier is a reasonable alternative target.
+    \item \textbf{Retrain} when AUC falls clearly below its validation level or CSI exceeds 0.25, or whenever the churn definition itself changes (e.g.\ a different $H$), which invalidates both the model and its calibration.
+\end{itemize}

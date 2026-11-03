@@ -51,7 +51,15 @@ xelatex main.tex
 xelatex main.tex   # run a second time so the table of contents is correct
 ```
 
-This produces `report/main.pdf`. Swap `report` for `brief` or `slide` to build those instead. If XeLaTeX reports a missing `.sty` file (BasicTeX ships a minimal package set), install it with:
+This produces `report/main.pdf`. Swap `report` for `brief` to build the brief. The slide deck uses the HUST Beamer theme in [`slide/hust-beamer/`](../../slide/hust-beamer/), which needs LuaLaTeX to find its Lato and TeX Gyre Adventor fonts:
+
+```bash
+cd slide
+lualatex main.tex
+lualatex main.tex
+```
+
+If XeLaTeX or LuaLaTeX reports a missing `.sty` file (BasicTeX ships a minimal package set), install it with:
 
 ```bash
 sudo tlmgr install <package-name>
@@ -73,12 +81,26 @@ If you use the **LaTeX Workshop** extension, it defaults to building with `latex
                 "-file-line-error",
                 "%DOC%"
             ]
+        },
+        {
+            "name": "lualatex",
+            "command": "/Library/TeX/texbin/lualatex",
+            "args": [
+                "-interaction=nonstopmode",
+                "-synctex=1",
+                "-file-line-error",
+                "%DOC%"
+            ]
         }
     ],
     "latex-workshop.latex.recipes": [
         {
             "name": "xelatex x2",
             "tools": ["xelatex", "xelatex"]
+        },
+        {
+            "name": "lualatex x2",
+            "tools": ["lualatex", "lualatex"]
         }
     ],
     "latex-workshop.latex.recipe.default": "xelatex x2",
@@ -86,7 +108,7 @@ If you use the **LaTeX Workshop** extension, it defaults to building with `latex
 }
 ```
 
-The `command` path above is where `brew install --cask basictex` puts binaries on macOS. On Linux/Windows, replace it with wherever your TeX Live install put `xelatex` (or just `"xelatex"` if it's already on your `PATH`).
+The `command` path above is where `brew install --cask basictex` puts binaries on macOS. On Linux/Windows, replace it with wherever your TeX Live install put `xelatex` (or just `"xelatex"` if it's already on your `PATH`). `slide/main.tex` starts with the magic comment `% !LW recipe=lualatex x2`, so LaTeX Workshop builds the deck with the `lualatex x2` recipe automatically; the report and brief keep the default `xelatex x2`.
 
 To build: open `report/main.tex` (or `brief/main.tex` / `slide/main.tex`), click into that editor tab so it's the active document, then run the build command (▶ button in the top-right, or `Cmd+Option+B`).
 
@@ -94,4 +116,5 @@ To build: open `report/main.tex` (or `brief/main.tex` / `slide/main.tex`), click
 
 - **"Cannot find LaTeX root file"** — the active editor tab wasn't `main.tex` when you triggered the build. Click into `main.tex` first.
 - **"spawn latexmk ENOENT"** — `latexmk` isn't installed and isn't needed; create the `.vscode/settings.json` from step 3 above so LaTeX Workshop builds with `xelatex` instead. After creating/editing it, reload the VS Code window (`Cmd+Shift+P` → "Developer: Reload Window") so the setting takes effect. To install `latexmk` anyway: `sudo tlmgr install latexmk`.
+- **"File `pgfopts.sty' not found"** when building the slides — the HUST theme's dependencies are not installed yet: `sudo tlmgr install $(cat slide/requirements.txt)`. Without admin rights, install them into your user tree instead: `tlmgr init-usertree && tlmgr --usermode install pgfopts tex-gyre lato`.
 - Build artifacts (`*.aux`, `*.toc`, `*.pdf`, etc.) are gitignored, so there's no need to clean them up before committing.

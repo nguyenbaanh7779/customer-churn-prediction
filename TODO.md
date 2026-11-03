@@ -14,7 +14,7 @@ Priority: **P1** required by the course · **P2** core of the strategy · **P3**
 ## P1 — Required by the course
 
 - [x] **`feat/value-and-rfm-segments`** — value proxy V and RFM segmentation (Strategy 4.7, 5.5)
-  - Value concentration in notebook 06: revenue share of the top 1% / 10% of customers
+  - Value concentration in notebook 01: revenue share of the top 1% / 10% of customers
   - `value_v` = average order value so far, winsorized at P99 fitted on the training period
   - RFM quintiles fitted on the training period, mapped to named segments (Champions, Loyal, Potential, At Risk, Can't Lose, Hibernating); per-segment count, revenue share, churn rate, average V
   - New columns in `modeling_dataset_h90.parquet`; update Chapters 4–5
@@ -28,7 +28,7 @@ Priority: **P1** required by the course · **P2** core of the strategy · **P3**
   - Done when: policy table at the base scenario and operating K, full grid in an appendix, value captured@K reported
 
 - [ ] **`docs/deliverables`** — required project package (Strategy 3.7, 9.4)
-  - `README.md`: setup, run order of notebooks 06 → 09, outputs of each step
+  - `README.md`: setup, run order of notebooks 01 → 05, outputs of each step
   - `docs/data_dictionary.md` + source log (URL, download date, license, filters, joins, cleaning log)
   - `docs/model_card.md` (one page)
   - Executive brief: done separately as `brief/main.tex` (not `docs/executive_brief.md`)
