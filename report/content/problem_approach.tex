@@ -29,7 +29,7 @@ The primary business objective is to support sustainable sales revenue by identi
 
 \begin{itemize}
     \item \textbf{Identify at-risk customers:} recognize existing customers who are likely to stop purchasing within a predefined period.
-    \item \textbf{Understand purchasing behavior:} investigate customer characteristics, such as purchase frequency, monetary value and time since the last purchase, that may be associated with churn risk.
+    \item \textbf{Understand customer value and purchasing behavior:} segment customers by recency, frequency and monetary value (RFM) to see where revenue and retention risk are concentrated, and investigate which customer characteristics, such as purchase frequency, monetary value and time since the last purchase, are associated with churn risk.
     \item \textbf{Support customer prioritization:} provide insights that help the business prioritize customers for potential retention activities.
 \end{itemize}
 
@@ -54,7 +54,7 @@ Success is defined \textbf{relative to simple alternatives} rather than by arbit
 \section{From Business Objective to Analytical Problem}
 \label{sec:2-7}
 
-Increasing revenue requires more repeat-purchase revenue from existing customers and efficient use of retention resources. The analytical direction is therefore to identify existing customers at risk of not purchasing again, estimate churn probability, and prioritize customers for retention activities.
+Increasing revenue requires more repeat-purchase revenue from existing customers and efficient use of retention resources. The RFM analysis of Chapter~\ref{ch:data-understanding} shows why this matters: a small group of high-value, recently active customers generates most revenue, and a smaller group of high-value customers that has gone quiet (VIP at risk) is still recoverable. The analytical direction is therefore to identify existing customers at risk of not purchasing again, estimate churn probability, and prioritize customers for retention activities.
 
 \section{Customer Retention Strategy}
 \label{sec:2-8}
@@ -79,7 +79,7 @@ Increasing revenue requires more repeat-purchase revenue from existing customers
 The approach is implemented as a sequence of steps, each covered by one chapter:
 
 \begin{itemize}
-    \item \textbf{Understand the data} (Chapter~\ref{ch:data-understanding}) -- sales and customer behavior, purchase intervals and revenue by purchase cadence, which inform the prediction horizon $H$ and the activity threshold $R_{\max}$.
+    \item \textbf{Understand the data} (Chapter~\ref{ch:data-understanding}) -- sales and seasonality, RFM features and customer segments, cohort retention, weekly segment dynamics, revenue concentration and purchase intervals, which inform the prediction horizon $H$, the activity threshold $R_{\max}$ and the customer value cap.
     \item \textbf{Prepare customer snapshots} (Chapter~\ref{ch:data-preparation}) -- turn transactions into Customer $\times$ Snapshot Date rows with point-in-time features, churn labels and an embargoed temporal split.
     \item \textbf{Model churn risk} (Chapter~\ref{ch:modeling}) -- compare baselines and algorithms and select a final model.
     \item \textbf{Evaluate} (Chapter~\ref{ch:evaluation}) -- predictive, ranking and scenario-based business-impact evaluation on the unseen test period.

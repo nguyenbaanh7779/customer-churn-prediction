@@ -5,7 +5,9 @@ Retail businesses rely on customer relationships and repeat purchases to maintai
 
 Identifying these customers before they become inactive can be challenging, particularly when businesses have large customer bases and substantial transaction histories. Without an effective way to identify potential churn, businesses may miss opportunities to maintain customer relationships and encourage repeat purchases.
 
-Customer churn prediction can help businesses better understand customer purchasing behavior and identify customers who may be at risk of becoming inactive.
+Retention resources are limited and customers are not equally valuable: in this project's data, the top 10\% of customers by net revenue generate 63\% of all revenue, and a single segment of high-value, recently active customers (Champions, 8.8\% of customers) generates about 58\%. The practical question is therefore which customers to prioritize for retention or promotion activities so that expected future margin grows without discounting more than necessary.
+
+Customer churn prediction, combined with an RFM view of customer value, can help businesses better understand customer purchasing behavior and identify customers who may be at risk of becoming inactive.
 
 \section{Problem Statement}
 \label{sec:1-2}
@@ -20,6 +22,7 @@ Customer churn prediction can help businesses better understand customer purchas
 
 \begin{enumerate}
     \item How can transaction history be converted into customer-level data for churn prediction?
+    \item How is customer value distributed, and which RFM segments carry most of the revenue and most of the retention risk?
     \item How well does purchasing behavior predict churn?
     \item Does churn-risk ranking improve prioritization under limited retention resources compared to rule-based targeting?
     \item Which customer behaviors are most associated with churn? (Correlation, not causation.)
@@ -51,7 +54,7 @@ The report is organized into ten chapters:
     \item \textbf{Introduction} -- background, problem statement, research questions, objectives and scope.
     \item \textbf{Problem Statement and Approach} (Chapter~\ref{ch:problem-approach}) -- the business problem, objectives and success criteria, and the analytical approach used to address them.
     \item \textbf{Dataset and Data Specification} (Chapter~\ref{ch:dataset}) -- the Online Retail II dataset, its characteristics and limitations, and its schema and conventions.
-    \item \textbf{Data Understanding} (Chapter~\ref{ch:data-understanding}) -- exploratory analysis of sales, customers and purchasing behavior, and the feasibility of churn prediction.
+    \item \textbf{Data Understanding} (Chapter~\ref{ch:data-understanding}) -- exploratory analysis of sales, seasonality, RFM features and customer segments, cohort retention, weekly segment dynamics, purchase intervals and revenue concentration, and the design decisions they imply for churn prediction.
     \item \textbf{Data Preparation} (Chapter~\ref{ch:data-preparation}) -- cleaning, customer snapshots, features, churn labels and the temporal split.
     \item \textbf{Modeling} (Chapter~\ref{ch:modeling}) -- baselines, feature sets, algorithms, tuning and interpretability.
     \item \textbf{Evaluation} (Chapter~\ref{ch:evaluation}) -- predictive, ranking and business-impact evaluation on the unseen test period.
