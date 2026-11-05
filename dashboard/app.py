@@ -52,6 +52,11 @@ section[data-testid="stSidebar"] h2 {{font-size: 0.78rem; text-transform: upperc
 """, unsafe_allow_html=True)
 
 PRESETS = {"Light (5%, 20%)": (0.05, 0.20), "Base (10%, 30%)": (0.10, 0.30), "Deep (20%, 40%)": (0.20, 0.40)}
+SEG_ORDER = ["Champions", "VIP at risk", "Loyal", "Developing", "One-time recent", "Cooling", "Lapsed", "Dormant"]
+SEG_HINT = {"Champions": "top 10% spenders, bought < 90 days ago", "VIP at risk": "top 10% spenders, silent > 90 days",
+            "Loyal": "4+ orders, bought < 90 days ago", "Developing": "2-3 orders, bought < 90 days ago",
+            "One-time recent": "1 order, bought < 90 days ago", "Cooling": "last order 90-180 days ago",
+            "Lapsed": "last order 180-365 days ago", "Dormant": "last order > 1 year ago"}
 
 
 @st.cache_data
@@ -59,9 +64,12 @@ def load():
     s = pd.read_parquet(ROOT / "data/results/customer_scores_actions_h90.parquet")
     rec = pd.read_parquet(ROOT / "data/processed/modeling_dataset_h90.parquet",
                           columns=["customer_id", "snapshot_date", "recency_days"])
-    seg = pd.read_parquet(ROOT / "data/results/rfm8_segments.parquet", columns=["customer_id", "snapshot_date", "segment8"])
-    s = s.merge(rec, on=["customer_id", "snapshot_date"], how="left").merge(seg, on=["customer_id", "snapshot_date"], how="left")
-    return s.rename(columns={"churn_probability_calibrated": "p", "churn_actual": "churn"})
+    seg = pd.read_parquet(ROOT / "data/results/rfm8_segments.parquet")
+    s = s.merge(rec, on=["customer_id", "snapshot_date"], how="left").merge(
+        seg[["customer_id", "snapshot_date", "segment8"]], on=["customer_id", "snapshot_date"], how="left")
+    s = s.rename(columns={"churn_probability_calibrated": "p", "churn_actual": "churn"})
+    all_seg = seg[seg.snapshot_date == seg.snapshot_date.max()].segment8.value_counts()
+    return s, all_seg
 
 
 def exp_outlay(df, d, e, r):
@@ -69,17 +77,18 @@ def exp_outlay(df, d, e, r):
     return d * df.value_v * (df.p * e + (1 - df.p) * r)
 
 
-def select(df, rule, mode, k, budget, d, e, m, r, c, need_positive, score_override=None):
-    """Boolean mask of customers who get an offer, chosen separately in each week."""
+def select(df, rule, mode, k, budget, d, e, m, r, c, score_override=None):
+    """Boolean mask of customers who get an offer, chosen separately in each week.
+    rule 'risk' = highest churn probability; 'margin' = highest expected margin (only if > 0)."""
     em = expected_margin(df.p, df.value_v, d, e, m, r, c)
-    score = df.p if rule == "Highest churn risk" else em
+    score = df.p if rule == "risk" else em
     if score_override is not None:
-        score, need_positive = score_override, False
-    ok = (em > 0) if ((need_positive or rule != "Highest churn risk") and score_override is None) else pd.Series(True, index=df.index)
+        score = score_override
+    ok = (em > 0) if (rule == "margin" and score_override is None) else pd.Series(True, index=df.index)
     work = pd.DataFrame({"w": df.snapshot_date, "s": score.where(ok, -np.inf), "o": exp_outlay(df, d, e, r)})
     work = work.sort_values(["w", "s"], ascending=[True, False])
     g = work.groupby("w")
-    if mode == "Share of active customers":
+    if mode == "share":
         take = g.cumcount() < np.maximum(np.round(g["s"].transform("size") * k), 1)
     else:
         take = g["o"].cumsum() <= budget
@@ -87,22 +96,15 @@ def select(df, rule, mode, k, budget, d, e, m, r, c, need_positive, score_overri
     return take.reindex(df.index).fillna(False), em
 
 
-df = load()
+df, all_seg = load()
 test = df[df.split == "test"].copy()
 last_date = df[df.split == "deployment"].snapshot_date.max()
 cur = df[df.snapshot_date == last_date].copy()
 
-# ---- sidebar controls -------------------------------------------------------
+# ---- sidebar: two controls only --------------------------------------------
 sb = st.sidebar
-sb.markdown("## Who gets an offer")
-rule = sb.radio("Selection rule", ["Highest churn risk", "Highest expected margin"], label_visibility="collapsed")
-need_pos = sb.checkbox("Only if expected margin > 0", value=False, disabled=(rule != "Highest churn risk"))
-mode = sb.radio("Limit by", ["Discount budget", "Share of customers"], horizontal=True)
-if mode == "Share of customers":
-    k, budget, mode = sb.slider("Share contacted", 5, 50, 20, 5, format="%d%%") / 100, None, "Share of active customers"
-else:
-    k, budget = None, float(sb.slider("Expected discount cost, £ per weekly cohort", 1000, 20000, 7740, 20))
-
+sb.markdown("## Weekly discount budget")
+budget = float(sb.slider("Expected discount cost per week (£)", 1000, 20000, 7740, 20, label_visibility="collapsed"))
 sb.markdown("## Offer scenario")
 preset = sb.selectbox("Preset (discount, response)", list(PRESETS), index=1, label_visibility="collapsed")
 d0, e0 = PRESETS[preset]
@@ -113,46 +115,41 @@ with sb.expander("Fine-tune assumptions"):
     m = st.slider("Gross margin", 0.20, 0.60, 0.40, 0.05)
     c = st.number_input("Contact cost (£)", 0.0, 5.0, 0.50, 0.10)
 
-# ---- current target list ----------------------------------------------------
-SEG_ORDER = ["Champions", "Loyal", "Developing", "One-time recent", "Cooling", "VIP at risk"]
-SEG_HINT = {"Champions": "top 10% spenders, bought < 90 days ago", "Loyal": "4+ orders, bought < 90 days ago",
-            "Developing": "2-3 orders, bought < 90 days ago", "One-time recent": "1 order, < 90 days ago",
-            "Cooling": "last order 90-180 days ago", "VIP at risk": "top 10% spenders, silent > 90 days"}
-sel, cur["em"] = select(cur, rule, mode, k, budget, d, e, m, r, c, need_pos)
-cur["action"] = np.where(sel, "Retain", np.where(cur.p.rank(pct=True) >= 0.80, "Nurture", "No-offer"))
+# ---- this Monday's list -----------------------------------------------------
+sel, cur["em"] = select(cur, "risk", "budget", None, budget, d, e, m, r, c)
+cur["action"] = np.where(sel, "Voucher", "No voucher")
 off = cur[sel]
-n_act = cur.action.value_counts()
-cur["out"] = exp_outlay(cur, d, e, r)
+spend = exp_outlay(off, d, e, r).sum()
 
-# test-week simulation for this rule (used in step 3)
-t_sel, _ = select(test, rule, mode, k, budget, d, e, m, r, c, need_pos)
-gain = pd.Series(row_gain(test, d, e, m, r, c), index=test.index)
+# ---- replay on the 10 test weeks -------------------------------------------
 weeks = test.snapshot_date.nunique()
-n_w = t_sel.groupby(test.snapshot_date).sum()
-rec_sel, _ = select(test, rule, mode, k, budget, d, e, m, r, c, False, score_override=test.recency_days.fillna(0))
-policies = {"Your rule": t_sel, "Longest since purchase": rec_sel,
-            "Offer to everyone": pd.Series(True, index=test.index), "No offer": pd.Series(False, index=test.index)}
-res = pd.DataFrame([dict(policy=n, margin=gain[mk].sum() / weeks, contacts=mk.sum() / weeks,
-                         outlay=(d * test.value_v * np.where(test.churn == 1, e, r))[mk].sum() / weeks) for n, mk in policies.items()])
-me, rc, ev = res.iloc[0], res.iloc[1], res.iloc[2]
+gain = pd.Series(row_gain(test, d, e, m, r, c), index=test.index)
+sim_out = d * test.value_v * np.where(test.churn == 1, e, r)
+risk_sel, _ = select(test, "risk", "budget", None, budget, d, e, m, r, c)
+marg_sel, _ = select(test, "margin", "share", 0.20, None, d, e, m, r, c)
+rec_sel, _ = select(test, "risk", "budget", None, budget, d, e, m, r, c, score_override=test.recency_days.fillna(0))
+policies = {"Highest churn risk": risk_sel, "Highest expected margin (top 20%)": marg_sel,
+            "Longest since last purchase": rec_sel, "Offer to everyone": pd.Series(True, index=test.index)}
+res = pd.DataFrame([dict(policy=n, margin=gain[mk].sum() / weeks, contacts=mk.sum() / weeks, outlay=sim_out[mk].sum() / weeks)
+                    for n, mk in policies.items()])
+me, rc, ev = res.iloc[0], res.iloc[2], res.iloc[3]
 
-top = cur[sel].segment8.value_counts()
-top_names = [f"{n} ({v})" for n, v in top.head(3).items()]
+# same rule under the three scenarios (for the closing line)
+scen = {}
+for name, (dd, ee) in PRESETS.items():
+    ts, _ = select(test, "risk", "budget", None, budget, dd, ee, m, r, c)
+    scen[name.split(" (")[0]] = pd.Series(row_gain(test, dd, ee, m, r, c), index=test.index)[ts].sum() / weeks
 
 st.title("Who should get this week's discount voucher?")
 st.markdown(f'<div class="sub">Online retailer · list for Monday {last_date:%d %b %Y} · {len(cur):,} active customers scored · '
-            f'assumptions: {d:.0%} discount, {e:.0%} of leavers respond, {r:.0%} of loyal buyers redeem, {m:.0%} margin · '
-            'simulated results, not measured sales</div>', unsafe_allow_html=True)
+            f'assumptions: {d:.0%} voucher, {e:.0%} of leavers use it to stay, {r:.0%} of others use it anyway, {m:.0%} margin · '
+            'simulated, not measured sales</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
-<div class="story"><b>In short:</b> send the voucher to the <b>{len(off):,}</b> customers most likely to stop buying
-({len(off) / len(cur):.0%} of active customers, about <b>£{exp_outlay(off, d, e, r).sum():,.0f}</b> of discount).
-In the 10 test weeks this rule earned about <b>£{me.margin:,.0f}</b> extra profit per week-group, against
-<b>£{rc.margin:,.0f}</b> for picking the customers silent the longest, and <b>£{ev.margin:,.0f}</b> for sending the voucher to everyone.</div>
 <div class="kpis">
- <div class="kpi"><div class="l">Active customers</div><div class="v">{len(cur):,}</div><div class="n">bought in the last 6 months</div></div>
+ <div class="kpi"><div class="l">Active customers</div><div class="v">{len(cur):,}</div><div class="n">scored this Monday</div></div>
  <div class="kpi"><div class="l">Get a voucher</div><div class="v">{len(off):,}</div><div class="n">{len(off)/len(cur):.0%} of active customers</div></div>
- <div class="kpi"><div class="l">Discount cost</div><div class="v">£{exp_outlay(off, d, e, r).sum():,.0f}</div><div class="n">expected, this week's list</div></div>
+ <div class="kpi"><div class="l">Discount cost</div><div class="v">£{spend:,.0f}</div><div class="n">expected, this week's list</div></div>
  <div class="kpi"><div class="l">Revenue at risk</div><div class="v">£{(off.value_v * off.p).sum():,.0f}</div><div class="n">order value × chance of leaving</div></div>
  <div class="kpi"><div class="l">Expected extra profit</div><div class="v">£{off.em.sum():,.0f}</div><div class="n">next 90 days, simulated</div></div>
 </div>
@@ -165,89 +162,74 @@ def step(n, title, sub):
 
 AX = dict(labelColor=MUTED, domain=False, ticks=False, grid=True, gridColor=LINE)
 YAX = alt.Axis(labelFontSize=12, labelColor=INK, ticks=False, domain=False, labelLimit=220, labelPadding=8)
+scored = cur.groupby("segment8").agg(risk=("p", "mean"), offered=("action", lambda a: (a == "Voucher").sum()))
+seg = pd.DataFrame({"segment": SEG_ORDER})
+seg["customers"] = seg.segment.map(all_seg).fillna(0).astype(int)
+seg["risk"] = seg.segment.map(scored.risk)
+seg["offered"] = seg.segment.map(scored.offered).fillna(0).astype(int)
+seg["hint"] = seg.segment.map(SEG_HINT)
+seg["scored"] = seg.risk.notna()
 
-# ---- step 1 -----------------------------------------------------------------
-step(1, "Who is likely to stop buying?", "Average chance of no purchase in the next 90 days, by customer group (Monday " + f"{last_date:%d %b}).")
-g1 = cur.groupby("segment8").agg(customers=("p", "size"), risk=("p", "mean")).reindex(SEG_ORDER).dropna().reset_index()
-g1["label"] = g1.apply(lambda x: f"{x.risk:.0%}  ·  {int(x.customers):,} customers", axis=1)
-g1["hint"] = g1.segment8.map(SEG_HINT)
-b1 = alt.Chart(g1).encode(y=alt.Y("segment8:N", sort=SEG_ORDER, title=None, axis=YAX))
-c1 = b1.mark_bar(cornerRadiusEnd=4, size=24).encode(
-    x=alt.X("risk:Q", title=None, scale=alt.Scale(domain=[0, 1.15]), axis=alt.Axis(format="%", values=[0, .25, .5, .75, 1], **AX)),
-    color=alt.condition(alt.datum.risk >= 0.4, alt.value(ORANGE), alt.value("#9ec5f3")),
-    tooltip=[alt.Tooltip("segment8:N", title="Group"), alt.Tooltip("hint:N", title="Definition"), alt.Tooltip("customers:Q", title="Customers"), alt.Tooltip("risk:Q", title="Avg risk", format=".0%")])
-t1 = b1.mark_text(align="left", dx=6, fontSize=12, color=INK).encode(x="risk:Q", text="label:N")
-st.altair_chart((c1 + t1).properties(height=36 * len(g1) + 10).configure_view(stroke=None), use_container_width=True)
-hi = g1.sort_values("risk", ascending=False).iloc[0]
-lo = g1.sort_values("risk").iloc[0]
-st.markdown(f'<div class="take">Risk climbs as customers go quiet or have only ordered once: <b>{hi.segment8}</b> customers are at {hi.risk:.0%}, '
-            f'<b>{lo.segment8}</b> only {lo.risk:.0%}.</div>', unsafe_allow_html=True)
+# ---- 1: who is leaving ------------------------------------------------------
+step(1, "Who is likely to stop buying?", f"Customers by group on {last_date:%d %b %Y}, with the model's average chance of no purchase in the next 90 days.")
+seg["label"] = seg.apply(lambda x: f"{x.risk:.0%}  ·  {x.customers:,} customers" if x.scored else f"not scored  ·  {x.customers:,} customers, silent > 6 months", axis=1)
+seg["x"] = seg.risk.fillna(0)
+b1 = alt.Chart(seg).encode(y=alt.Y("segment:N", sort=SEG_ORDER, title=None, axis=YAX))
+c1 = b1.mark_bar(cornerRadiusEnd=4, size=22).encode(
+    x=alt.X("x:Q", title=None, scale=alt.Scale(domain=[0, 1.25]), axis=alt.Axis(format="%", values=[0, .25, .5, .75, 1], **AX)),
+    color=alt.condition(alt.datum.x >= 0.4, alt.value(ORANGE), alt.value("#9ec5f3")),
+    tooltip=[alt.Tooltip("segment:N", title="Group"), alt.Tooltip("hint:N", title="Definition"), alt.Tooltip("customers:Q", title="Customers")])
+t1 = b1.mark_text(align="left", dx=6, fontSize=12, color=INK).encode(x="x:Q", text="label:N")
+st.altair_chart((c1 + t1).properties(height=32 * len(seg) + 10).configure_view(stroke=None), use_container_width=True)
+hot = seg[seg.risk >= 0.4]
+st.markdown(f'<div class="take">Risk is highest for customers who bought only once or have started to go quiet: '
+            f'{", ".join(f"<b>{n}</b> {v:.0%}" for n, v in zip(hot.segment, hot.risk))}. <b>Champions</b> are only {seg.set_index("segment").risk["Champions"]:.0%}. '
+            f'Lapsed and Dormant customers have already gone and are not scored.</div>', unsafe_allow_html=True)
 
-# ---- step 2 -----------------------------------------------------------------
-step(2, "Who gets a voucher?", "Customers with the highest risk, until the weekly discount budget runs out.")
-g2 = cur.groupby("segment8").agg(total=("p", "size"), offered=("action", lambda a: (a == "Retain").sum()), margin=("em", lambda x: x[cur.loc[x.index, "action"] == "Retain"].sum())).reindex(SEG_ORDER).dropna().reset_index()
-g2["not_offered"] = g2.total - g2.offered
-long = g2.melt("segment8", ["offered", "not_offered"], var_name="k", value_name="n")
+# ---- 2: who gets a voucher --------------------------------------------------
+step(2, "Who gets a voucher?", "The highest-risk customers, until the weekly discount budget is used up.")
+seg["not_offered"] = seg.customers - seg.offered
+long = seg[seg.scored].melt("segment", ["offered", "not_offered"], var_name="k", value_name="n")
 long["k"] = long.k.map({"offered": "Gets a voucher", "not_offered": "No voucher"})
-c2 = alt.Chart(long).mark_bar(size=24).encode(
-    y=alt.Y("segment8:N", sort=SEG_ORDER, title=None, axis=YAX),
+c2 = alt.Chart(long).mark_bar(size=22).encode(
+    y=alt.Y("segment:N", sort=SEG_ORDER, title=None, axis=YAX),
     x=alt.X("n:Q", stack="zero", title=None, axis=alt.Axis(format="~s", **AX)),
     color=alt.Color("k:N", scale=alt.Scale(domain=["Gets a voucher", "No voucher"], range=[BLUE, "#e3e2dc"]), legend=alt.Legend(orient="top", title=None, labelFontSize=12)),
     order=alt.Order("k:N", sort="descending"),
-    tooltip=[alt.Tooltip("segment8:N", title="Group"), alt.Tooltip("k:N", title=""), alt.Tooltip("n:Q", title="Customers", format=",")])
-st.altair_chart(c2.properties(height=36 * len(g2) + 40).configure_view(stroke=None), use_container_width=True)
-big = g2.sort_values("offered", ascending=False)
-share_top2 = big.offered.head(2).sum() / max(big.offered.sum(), 1)
-loyal_off = int(g2[g2.segment8.isin(["Champions", "Loyal"])].offered.sum())
-st.markdown(f'<div class="take">Offers go mainly to <b>{big.iloc[0].segment8}</b> and <b>{big.iloc[1].segment8}</b> customers ({share_top2:.0%} of the list). '
-            f'Champions and Loyal get only {loyal_off}: they mostly buy anyway, so a voucher would just cost margin.</div>', unsafe_allow_html=True)
+    tooltip=[alt.Tooltip("segment:N", title="Group"), alt.Tooltip("k:N", title=""), alt.Tooltip("n:Q", title="Customers", format=",")])
+st.altair_chart(c2.properties(height=32 * int(seg.scored.sum()) + 40).configure_view(stroke=None), use_container_width=True)
+big = seg.sort_values("offered", ascending=False)
+top3 = big.head(3)
+st.markdown(f'<div class="take"><b>{len(off):,}</b> customers get a voucher (about £{spend:,.0f} of discount). '
+            f'{top3.offered.sum() / max(len(off), 1):.0%} of them are <b>{top3.iloc[0].segment}</b>, <b>{top3.iloc[1].segment}</b> or <b>{top3.iloc[2].segment}</b>. '
+            f'Champions and Loyal get {int(seg.set_index("segment").offered[["Champions", "Loyal"]].sum())}: they mostly buy anyway, so a voucher would only cost margin.</div>', unsafe_allow_html=True)
 
-# ---- step 3 -----------------------------------------------------------------
-step(3, "Does it pay off?", "Replay on the 10 test weeks (Jul–Sep 2011) that the model never saw: extra profit after discounts, per weekly group.")
+# ---- 3: does it pay ---------------------------------------------------------
+step(3, "Does it pay off?", "Replay on the 10 test weeks (Jul–Sep 2011), which the model never saw: extra profit after discounts, per weekly group.")
 res["label"] = res.margin.map(lambda v: f"£{v:,.0f}")
 res["sub"] = res.apply(lambda x: f"{x.contacts:,.0f} customers · £{x.outlay:,.0f} discount", axis=1)
 order = list(res.policy)
 b3 = alt.Chart(res).encode(y=alt.Y("policy:N", sort=order, title=None, axis=YAX))
 c3 = b3.mark_bar(cornerRadiusEnd=4, size=26).encode(
-    x=alt.X("margin:Q", title=None, scale=alt.Scale(domain=[0, float(res.margin.max()) * 1.6], nice=False), axis=alt.Axis(format="~s", labelExpr="'£' + datum.label", **AX)),
-    color=alt.condition(alt.datum.policy == "Your rule", alt.value(BLUE), alt.value(GREY)),
+    x=alt.X("margin:Q", title=None, scale=alt.Scale(domain=[0, float(res.margin.max()) * 1.7], nice=False), axis=alt.Axis(format="~s", labelExpr="'£' + datum.label", **AX)),
+    color=alt.condition(alt.datum.policy == "Highest churn risk", alt.value(BLUE), alt.value(GREY)),
     tooltip=[alt.Tooltip("policy:N", title="Policy"), alt.Tooltip("margin:Q", title="Extra profit (£)", format=",.0f"), alt.Tooltip("contacts:Q", title="Customers", format=",.0f"), alt.Tooltip("outlay:Q", title="Discount (£)", format=",.0f")])
-t3 = b3.mark_text(align="left", dx=6, fontSize=12, color=INK).encode(x="margin:Q", text=alt.Text("label:N"))
+t3 = b3.mark_text(align="left", dx=6, fontSize=12, color=INK).encode(x="margin:Q", text="label:N")
 t3b = b3.mark_text(align="left", dx=62, fontSize=11, color=MUTED).encode(x="margin:Q", text="sub:N")
-st.altair_chart((c3 + t3 + t3b).properties(height=190).configure_view(stroke=None), use_container_width=True)
-st.markdown(f'<div class="take">Same discount budget, but picking by model risk earns <b>{(me.margin / rc.margin - 1):+.0%}</b> versus “longest since purchase”. '
-            f'Giving the voucher to everyone costs £{ev.outlay:,.0f} in discounts for £{ev.margin:,.0f}. '
-            'Weekly groups overlap, so do not add them up.</div>', unsafe_allow_html=True)
+st.altair_chart((c3 + t3 + t3b).properties(height=210).configure_view(stroke=None), use_container_width=True)
+st.markdown(f'<div class="take">With the same discount budget, ranking by model risk earns <b>{(me.margin / rc.margin - 1):+.0%}</b> more than picking the customers silent the longest. '
+            f'Sending the voucher to everyone costs £{ev.outlay:,.0f} for £{ev.margin:,.0f}. Weekly groups overlap, so do not add them up.</div>', unsafe_allow_html=True)
 
-# ---- step 4 -----------------------------------------------------------------
-step(4, "What if our assumptions are wrong?", "The data has no past vouchers, so response and margin are guesses. Same rule, three scenarios.")
-sc = []
-for name, (dd, ee) in PRESETS.items():
-    ts, _ = select(test, rule, mode, k, budget, dd, ee, m, r, c, need_pos)
-    gg = pd.Series(row_gain(test, dd, ee, m, r, c), index=test.index)[ts]
-    sc.append({"Scenario": name.split(" (")[0], "What we assume": f"{dd:.0%} off, {ee:.0%} of leavers respond",
-               "Customers / week": ts.sum() / weeks, "Discount (£)": (dd * test.value_v * np.where(test.churn == 1, ee, r))[ts].sum() / weeks,
-               "Extra profit (£)": gg.sum() / weeks})
-sc = pd.DataFrame(sc)
-st.dataframe(sc, hide_index=True, use_container_width=True, column_config={
-    "Customers / week": st.column_config.NumberColumn(format="%.0f"), "Discount (£)": st.column_config.NumberColumn(format="%.0f"),
-    "Extra profit (£)": st.column_config.NumberColumn(format="%.0f")})
-st.markdown('<div class="take">Profit stays positive in all three. The real pilot should replace these guesses with measured response.</div>', unsafe_allow_html=True)
-
-# ---- step 5: the list --------------------------------------------------------
-step(5, "The list to act on", "Download and hand to the campaign team.")
-choice = st.segmented_control("Action", ["Retain", "Nurture", "No-offer"], default="Retain", label_visibility="collapsed") or "Retain"
-cap = {"Retain": "Send the voucher.", "Nurture": "Higher risk but outside the budget: light-touch contact, no discount.", "No-offer": "Leave alone."}[choice]
-st.markdown(f'<div class="note" style="margin:0 0 .4rem">{choice}: {cap} ({n_act.get(choice, 0):,} customers)</div>', unsafe_allow_html=True)
-view = cur[cur.action == choice].sort_values("em", ascending=False)[["customer_id", "segment8", "customer_type", "p", "value_v", "em"]]
-view = view.rename(columns={"customer_id": "Customer", "segment8": "Group", "customer_type": "Type", "p": "Churn risk", "value_v": "Usual order (£)", "em": "Expected profit (£)"})
-st.dataframe(view, hide_index=True, height=360, use_container_width=True, column_config={
+# ---- 4: what to do ----------------------------------------------------------
+step(4, "What do we do next?", "Hand this list to the campaign team, then test the assumptions in a pilot.")
+view = off.sort_values("em", ascending=False)[["customer_id", "segment8", "p", "value_v", "em"]].rename(columns={
+    "customer_id": "Customer", "segment8": "Group", "p": "Churn risk", "value_v": "Usual order (£)", "em": "Expected profit (£)"})
+st.dataframe(view, hide_index=True, height=300, use_container_width=True, column_config={
     "Customer": st.column_config.NumberColumn(format="%d", width="small"),
     "Churn risk": st.column_config.ProgressColumn(min_value=0.0, max_value=1.0, format="%.2f"),
     "Usual order (£)": st.column_config.NumberColumn(format="%.0f", width="small"),
     "Expected profit (£)": st.column_config.NumberColumn(format="%.1f", width="small")})
-st.download_button(f"Download {choice} list (CSV)", view.to_csv(index=False).encode(), f"{choice.lower()}_list.csv", "text/csv")
-
-st.markdown('<div class="note" style="margin-top:2rem;border-top:1px solid #e5e5e0;padding-top:.8rem">'
-            'Churn = no purchase in the next 90 days; risk from the team’s calibrated logistic regression. Groups follow the RFM rules in the segmentation notebook '
-            '(Lapsed and Dormant customers are not scored). Response, redemption and margin are assumptions: the dataset has no promotions or costs.</div>', unsafe_allow_html=True)
+st.download_button("Download voucher list (CSV)", view.to_csv(index=False).encode(), "voucher_list.csv", "text/csv")
+st.markdown(f'<div class="take">The response rates and margin are assumptions: the data has no past vouchers. Extra profit stays positive in all three scenarios '
+            f'(Light £{scen["Light"]:,.0f}, Base £{scen["Base"]:,.0f}, Deep £{scen["Deep"]:,.0f} per weekly group). '
+            'Next: a 6–8 week pilot with a 20% no-voucher control group.</div>', unsafe_allow_html=True)
